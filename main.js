@@ -112,6 +112,8 @@ app.post("/webhook", async (req, res) => {
     // --- Log inbound message ---
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming);
 
+    console.log(body);
+
     // --- Mark inbound as read ---
     await markMessageAsRead(wamid);
 
