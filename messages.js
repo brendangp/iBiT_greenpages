@@ -117,15 +117,28 @@ async function sendText(conversationId, to, text, botNumber) {
 
 async function markMessageAsRead(messageId) {
   try {
+    // --- Mark as read in WhatsApp API
     await api.post(`/${PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
       status: "read",
       message_id: messageId,
     });
+
+    // --- Update status in your database
+    await query(
+      `UPDATE messages
+       SET status = 'received',
+           updated_time = NOW()
+       WHERE wamid = $1`,
+      [messageId]
+    );
+
+    console.log(`✅ Message ${messageId} marked as read and updated in DB`);
   } catch (err) {
     console.error("❌ Failed to mark as read:", err.response?.data || err.message);
   }
 }
+
 
 module.exports = {
   sendMenu,

@@ -64,13 +64,30 @@ async function logInboundMessage(conversationId, message, botNumber = null) {
 }
 
 async function updateMessageStatus(wamid, status) {
-  await query(
-    `UPDATE messages 
-     SET status = $1, updated_time = NOW() 
-     WHERE wamid = $2`,
-    [status, wamid]
-  );
+  try {
+    // Fetch current status
+    const res = await query(
+      `SELECT status FROM messages WHERE wamid = $1`,
+      [wamid]
+    );
+
+    const currentStatus = res.rows[0]?.status;
+
+    // Only update if current status is not 'read'
+    if (currentStatus && currentStatus !== 'read') {
+      await query(
+        `UPDATE messages 
+         SET status = $1, updated_time = NOW() 
+         WHERE wamid = $2`,
+        [status, wamid]
+      );
+      console.log(`📊 Message ${wamid} status updated to ${status}`);
+    }
+  } catch (err) {
+    console.error(`❌ Failed to update status for ${wamid}:`, err.message);
+  }
 }
+
 
 /* ---------------- Webhook verification ---------------- */
 app.get("/webhook", (req, res) => {
@@ -109,9 +126,8 @@ app.post("/webhook", async (req, res) => {
     const conversation = await getOrCreateConversation(from);
 
     // --- Log inbound message ---
-    const botNumber = value?.metadata?.phone_number_id;
+    const botNumber = value?.metadata?.display_phone_number;
     console.log("Bot number:", botNumber);
-    console.log(value?.metadata);
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
 
     // --- Mark inbound as read ---
