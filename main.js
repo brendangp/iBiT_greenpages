@@ -106,19 +106,19 @@ app.post("/webhook", async (req, res) => {
     const from = incoming.from;
     console.log("📩 Incoming message from:", from);
 
-    // Ensure conversation
+    // --- Ensure conversation exists ---
     const conversation = await getOrCreateConversation(from);
 
-    // Log inbound
+    // --- Log inbound message ---
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming);
 
-    // Mark inbound as read
+    // --- Mark inbound as read ---
     await markMessageAsRead(wamid);
 
-    // Echo the message back
+    // --- Echo back the same text ---
     if (body) {
-      const replyId = await sendText(from, body);
-      await logOutboundMessage(conversation.conversation_id, replyId, from, body);
+      const replyWamid = await sendText(from, body);  // returns wamid
+      await logOutboundMessage(conversation.conversation_id, replyWamid, from, body);
     }
   } catch (err) {
     console.error("Webhook error:", err.response?.data || err.message);
