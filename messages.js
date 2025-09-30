@@ -9,17 +9,18 @@ const api = axios.create({
   headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` },
 });
 
-/**
- * Log outbound message into messages table
- */
-async function logOutboundMessage(conversationId, wamid, to, type, body = null) {
+/*** Log outbound message into messages table*/
+async function logOutboundMessage(conversationId, wamid, toNumber, type, body = null, botNumber = null) {
+  const fromNumber = botNumber || process.env.BOT_PHONE_NUMBER || "unknown";
+
   await query(
-    `INSERT INTO messages 
-       (conversation_id, wamid, direction, from_number, to_number, type, body, status, sent_time) 
-     VALUES ($1, $2, 'outbound', $3, $4, $5, $6, 'sent', NOW())`,
-    [conversationId, wamid, PHONE_NUMBER_ID, to, type, body]
+    `INSERT INTO messages
+       (conversation_id, wamid, direction, from_number, to_number, type, body, created_time)
+     VALUES ($1, $2, 'outbound', $3, $4, $5, $6, NOW())`,
+    [conversationId, wamid, fromNumber, toNumber, type, body]
   );
 }
+
 
 /* ---------------- WhatsApp Send Functions ---------------- */
 
@@ -103,7 +104,7 @@ async function sendText(conversationId, to, text) {
     });
 
     const wamid = res.data?.messages?.[0]?.id;
-    if (wamid) await logOutboundMessage(conversationId, wamid, to, "text", text);
+    if (wamid) await logOutboundMessage(conversationId, wamid, toNumber, "text", text, botNumber);
     return wamid;
   } catch (err) {
     console.error("❌ Failed to send text:", err.response?.data || err.message);

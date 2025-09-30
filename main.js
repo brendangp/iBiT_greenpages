@@ -119,7 +119,7 @@ app.post("/webhook", async (req, res) => {
 
     // --- Echo back the same text ---
     if (body) {
-      const replyWamid = await sendText(from, body);  // returns wamid
+      const replyWamid = await sendText(conversation.conversation_id, from, body);  // returns wamid
       await logOutboundMessage(conversation.conversation_id, replyWamid, from, body);
     }
   } catch (err) {
