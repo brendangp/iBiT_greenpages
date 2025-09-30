@@ -9,16 +9,21 @@ const api = axios.create({
   headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` },
 });
 
-async function logOutboundMessage(recipient, type, wamid, body = null) {
+/**
+ * Log outbound message into messages table
+ */
+async function logOutboundMessage(conversationId, wamid, to, type, body = null) {
   await query(
-    `INSERT INTO bot_messages (wamid, direction, recipient, type, body, status, sent_time)
-     VALUES ($1, 'outbound', $2, $3, $4, 'sent', NOW())`,
-    [wamid, recipient, type, body]
+    `INSERT INTO messages 
+       (conversation_id, wamid, direction, from_number, to_number, type, body, status, sent_time) 
+     VALUES ($1, $2, 'outbound', $3, $4, $5, $6, 'sent', NOW())`,
+    [conversationId, wamid, PHONE_NUMBER_ID, to, type, body]
   );
 }
 
-// --- Menu rows will be passed in from main.js
-async function sendMenu(to, greetingText = null, menuRows = []) {
+/* ---------------- WhatsApp Send Functions ---------------- */
+
+async function sendMenu(conversationId, to, greetingText = null, menuRows = []) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
@@ -39,13 +44,14 @@ async function sendMenu(to, greetingText = null, menuRows = []) {
     });
 
     const wamid = res.data?.messages?.[0]?.id;
-    if (wamid) await logOutboundMessage(to, "menu", wamid, greetingText);
+    if (wamid) await logOutboundMessage(conversationId, wamid, to, "menu", greetingText);
+    return wamid;
   } catch (err) {
     console.error("❌ Failed to send menu:", err.response?.data || err.message);
   }
 }
 
-async function sendPDF(to, pdfUrl, fileName, caption = null) {
+async function sendPDF(conversationId, to, pdfUrl, fileName, caption = null) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
@@ -55,13 +61,14 @@ async function sendPDF(to, pdfUrl, fileName, caption = null) {
     });
 
     const wamid = res.data?.messages?.[0]?.id;
-    if (wamid) await logOutboundMessage(to, "pdf", wamid, caption || fileName);
+    if (wamid) await logOutboundMessage(conversationId, wamid, to, "pdf", caption || fileName);
+    return wamid;
   } catch (err) {
     console.error("❌ Failed to send PDF:", err.response?.data || err.message);
   }
 }
 
-async function sendURLButton(to, bodyText, buttonText, url) {
+async function sendURLButton(conversationId, to, bodyText, buttonText, url) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
@@ -78,13 +85,14 @@ async function sendURLButton(to, bodyText, buttonText, url) {
     });
 
     const wamid = res.data?.messages?.[0]?.id;
-    if (wamid) await logOutboundMessage(to, "url_button", wamid, `${buttonText} -> ${url}`);
+    if (wamid) await logOutboundMessage(conversationId, wamid, to, "url_button", `${buttonText} -> ${url}`);
+    return wamid;
   } catch (err) {
     console.error("❌ Failed to send URL button:", err.response?.data || err.message);
   }
 }
 
-async function sendText(to, text) {
+async function sendText(conversationId, to, text) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
@@ -94,7 +102,8 @@ async function sendText(to, text) {
     });
 
     const wamid = res.data?.messages?.[0]?.id;
-    if (wamid) await logOutboundMessage(to, "text", wamid, text);
+    if (wamid) await logOutboundMessage(conversationId, wamid, to, "text", text);
+    return wamid;
   } catch (err) {
     console.error("❌ Failed to send text:", err.response?.data || err.message);
   }
