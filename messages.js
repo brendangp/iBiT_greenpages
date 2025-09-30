@@ -96,6 +96,7 @@ async function sendText(conversationId, to, text) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
+      recipient_type: "individual",
       to,
       type: "text",
       text: { body: text },
