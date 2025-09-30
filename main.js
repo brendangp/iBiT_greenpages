@@ -110,7 +110,7 @@ app.post("/webhook", async (req, res) => {
     const conversation = await getOrCreateConversation(from);
 
     // --- Log inbound message ---
-    const botNumber = incoming.to;
+    const botNumber = value?.metadata?.phone_number_id;
     console.log("Bot number:", botNumber);
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
 
