@@ -23,7 +23,7 @@ async function logOutboundMessage(conversationId, wamid, toNumber, type, body = 
 
 
 /* ---------------- WhatsApp Send Functions ---------------- */
-
+/// TODO need editing
 async function sendMenu(conversationId, to, greetingText = null, menuRows = []) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
@@ -52,6 +52,7 @@ async function sendMenu(conversationId, to, greetingText = null, menuRows = []) 
   }
 }
 
+/// TODO need editing
 async function sendPDF(conversationId, to, pdfUrl, fileName, caption = null) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
@@ -69,6 +70,7 @@ async function sendPDF(conversationId, to, pdfUrl, fileName, caption = null) {
   }
 }
 
+/// TODO need editing
 async function sendURLButton(conversationId, to, bodyText, buttonText, url) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
@@ -93,7 +95,7 @@ async function sendURLButton(conversationId, to, bodyText, buttonText, url) {
   }
 }
 
-async function sendText(conversationId, to, text) {
+async function sendText(conversationId, to, text, botNumber) {
   try {
     const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
       messaging_product: "whatsapp",
@@ -104,7 +106,9 @@ async function sendText(conversationId, to, text) {
     });
 
     const wamid = res.data?.messages?.[0]?.id;
-    if (wamid) await logOutboundMessage(conversationId, wamid, toNumber, "text", text, botNumber);
+    if (wamid) {
+      await logOutboundMessage(conversationId, wamid, to, "text", text, botNumber);
+    }
     return wamid;
   } catch (err) {
     console.error("❌ Failed to send text:", err.response?.data || err.message);

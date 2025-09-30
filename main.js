@@ -32,36 +32,35 @@ async function getOrCreateConversation(phoneNumber) {
 }
 
 /* ---------------- Messages ---------------- */
-async function logInboundMessage(conversationId, message) {
+async function logInboundMessage(conversationId, message, botNumber = null) {
   const wamid = message.id;
-  const from = message.from;
+  const fromNumber = message.from;
+  const toNumber = botNumber || process.env.BOT_PHONE_NUMBER || "unknown";
   const type = message.type;
+
   let body = null;
 
-  if (type === "text") body = message.text?.body;
-  else if (type === "image") body = "[Image]";
-  else if (type === "document") body = message.document?.filename;
-  else if (type === "button") body = message.button?.text || message.button?.payload;
-  else if (type === "interactive") {
+  if (type === "text") {
+    body = message.text?.body;
+  } else if (type === "image") {
+    body = "[Image]";
+  } else if (type === "document") {
+    body = message.document?.filename;
+  } else if (type === "button") {
+    body = message.button?.text || message.button?.payload;
+  } else if (type === "interactive") {
     if (message.interactive?.list_reply) body = message.interactive.list_reply?.title;
     else if (message.interactive?.button_reply) body = message.interactive.button_reply?.title;
   }
 
   await query(
-    `INSERT INTO messages (conversation_id, wamid, direction, from_number, to_number, type, body, status) 
-     VALUES ($1,$2,'inbound',$3,$4,$5,$6,'received')`,
-    [conversationId, wamid, from, PHONE_NUMBER_ID, type, body]
+    `INSERT INTO messages
+       (conversation_id, wamid, direction, from_number, to_number, type, body, created_time)
+     VALUES ($1, $2, 'inbound', $3, $4, $5, $6, NOW())`,
+    [conversationId, wamid, fromNumber, toNumber, type, body]
   );
 
   return { wamid, body };
-}
-
-async function logOutboundMessage(conversationId, wamid, to, body) {
-  await query(
-    `INSERT INTO messages (conversation_id, wamid, direction, from_number, to_number, type, body, status) 
-     VALUES ($1,$2,'outbound',$3,$4,'text',$5,'sent')`,
-    [conversationId, wamid, PHONE_NUMBER_ID, to, body]
-  );
 }
 
 async function updateMessageStatus(wamid, status) {
@@ -110,7 +109,8 @@ app.post("/webhook", async (req, res) => {
     const conversation = await getOrCreateConversation(from);
 
     // --- Log inbound message ---
-    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming);
+    const botNumber = incoming.to;
+    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
 
     console.log(body);
 
@@ -119,8 +119,7 @@ app.post("/webhook", async (req, res) => {
 
     // --- Echo back the same text ---
     if (body) {
-      const replyWamid = await sendText(conversation.conversation_id, from, body);  // returns wamid
-      await logOutboundMessage(conversation.conversation_id, replyWamid, from, body);
+      const replyWamid = await sendText(conversation.conversation_id, from, body, botNumber);  // returns wamid
     }
   } catch (err) {
     console.error("Webhook error:", err.response?.data || err.message);
