@@ -100,6 +100,7 @@ app.post("/webhook", async (req, res) => {
 
     // --- Handle inbound messages ---
     const incoming = value?.messages?.[0];
+    console.log(incoming);
     if (!incoming) return;
 
     const from = incoming.from;
@@ -110,9 +111,8 @@ app.post("/webhook", async (req, res) => {
 
     // --- Log inbound message ---
     const botNumber = incoming.to;
+    console.log("Bot number:", botNumber);
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
-
-    console.log(body);
 
     // --- Mark inbound as read ---
     await markMessageAsRead(wamid);
