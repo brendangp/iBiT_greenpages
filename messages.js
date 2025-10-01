@@ -115,6 +115,33 @@ async function sendText(conversationId, to, text, botNumber) {
   }
 }
 
+/// Send quick reply buttons (e.g. Continue/Quit)
+async function sendButtons(conversationId, to, bodyText, buttons, botNumber) {
+  try {
+    const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: bodyText },
+        action: { buttons },
+      },
+    });
+
+    const wamid = res.data?.messages?.[0]?.id;
+    if (wamid) {
+      // Log outbound message
+      const btnLabels = buttons.map(b => b.reply?.title).join(", ");
+      await logOutboundMessage(conversationId, wamid, to, "buttons", `${bodyText} [${btnLabels}]`, botNumber);
+    }
+    return wamid;
+  } catch (err) {
+    console.error("❌ Failed to send buttons:", err.response?.data || err.message);
+  }
+}
+
+
 async function markMessageAsRead(messageId) {
   try {
     // --- Mark as read in WhatsApp API
@@ -145,5 +172,6 @@ module.exports = {
   sendPDF,
   sendURLButton,
   sendText,
+  sendButtons,
   markMessageAsRead,
 };

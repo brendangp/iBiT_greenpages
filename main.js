@@ -1,7 +1,8 @@
 const express = require("express");
 require("dotenv").config();
 const { query } = require("./db");
-const { sendText, markMessageAsRead } = require("./messages");
+const { sendText, sendButtons, markMessageAsRead } = require("./messages");
+const prompts = require("./prompts");
 
 const app = express();
 app.use(express.json());
@@ -127,16 +128,87 @@ app.post("/webhook", async (req, res) => {
 
     // --- Log inbound message ---
     const botNumber = value?.metadata?.display_phone_number;
-    console.log("Bot number:", botNumber);
+
+    // If terms not accepted yet
+    if (!conversation.terms_accepted) {
+      const body = incoming.text?.body || "[Non-text message]";
+
+      // Store the pending message
+      await query(
+        `UPDATE conversations 
+         SET data = $1 
+         WHERE conversation_id = $2`,
+        [body, conversation.conversation_id]
+      );
+
+      // Send Terms & Conditions with Continue/Quit buttons
+      await sendButtons(
+        conversation.conversation_id,
+        from,
+        prompts.terms_of_use_message,
+        [
+          { type: "reply", reply: { id: "continue_terms", title: "Continue" } },
+          { type: "reply", reply: { id: "quit_terms", title: "Quit" } }
+        ],
+        botNumber
+      );
+
+      return; // stop here until terms accepted
+    }
+
+    // --- Handle terms reply buttons ---
+    if (incoming.type === "interactive" && incoming.interactive?.button_reply) {
+      const replyId = incoming.interactive.button_reply.id;
+
+      if (replyId === "continue_terms") {
+        await query(
+          `UPDATE conversations 
+           SET terms_accepted = true, state = 'active' 
+           WHERE conversation_id = $1`,
+          [conversation.conversation_id]
+        );
+
+        // Send back the pending data
+        const resPending = await query(
+          `SELECT data FROM conversations WHERE conversation_id = $1`,
+          [conversation.conversation_id]
+        );
+        const pendingData = resPending.rows[0]?.data;
+
+        if (pendingData) {
+          await sendText(conversation.conversation_id, from, pendingData, botNumber);
+          await query(
+            `UPDATE conversations SET data = NULL WHERE conversation_id = $1`,
+            [conversation.conversation_id]
+          );
+        }
+        return;
+      }
+
+      if (replyId === "quit_terms") {
+        await query(
+          `UPDATE conversations SET data = NULL, state = 'finish' WHERE conversation_id = $1`,
+          [conversation.conversation_id]
+        );
+        await sendText(
+          conversation.conversation_id,
+          from,
+          prompts.quit_response,
+          botNumber
+        );
+        return;
+      }
+    }
+
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
 
     // --- Mark inbound as read ---
     await markMessageAsRead(wamid);
 
     // --- Echo back the same text ---
-    if (body) {
-      const replyWamid = await sendText(conversation.conversation_id, from, body, botNumber);  // returns wamid
-    }
+    // if (body) {
+    //   const replyWamid = await sendText(conversation.conversation_id, from, body, botNumber);  // returns wamid
+    // }
   } catch (err) {
     console.error("Webhook error:", err.response?.data || err.message);
   }
