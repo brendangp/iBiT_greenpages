@@ -178,18 +178,14 @@ app.post("/webhook", async (req, res) => {
               `SELECT data FROM conversations WHERE conversation_id = $1`,
               [conversation.conversation_id]
             );
-            let pendingData = resPending.rows[0]?.data;
-            let saveData = resPending.rows[0]?.data;
-            // console.log(pendingData);
 
-            if (!pendingData || !Array.isArray(pendingData)) {
-              pendingData = [];
-            }
+            let pendingData = resPending.rows[0]?.data || [];
+            let saveData = [...pendingData]; // copy for saving, does not include system prompt
 
-            // --- Append system prompt for OpenAI ---
-            pendingData.push({ role: "system", content: prompts.system_prompt });
+            // Prepare AI input with system prompt (but do not save this in DB)
+            const aiInput = [...pendingData, { role: "system", content: prompts.system_prompt }];
 
-            const aiResponse = await getResponses(pendingData);
+            const aiResponse = await getResponses(aiInput);
 
             if (aiResponse) {
               const messageText = aiResponse.text;
