@@ -179,6 +179,7 @@ app.post("/webhook", async (req, res) => {
               [conversation.conversation_id]
             );
             let pendingData = resPending.rows[0]?.data;
+            let saveData = pendingData;
             console.log(pendingData);
 
             if (!pendingData || !Array.isArray(pendingData)) {
@@ -189,20 +190,22 @@ app.post("/webhook", async (req, res) => {
             pendingData.push({ role: "system", content: prompts.system_prompt });
 
             const aiResponse = await getResponses(pendingData);
+
             if (aiResponse) {
-              console.log("🤖 AI Response:", aiResponse);
+              const messageText = aiResponse.text;
 
-              // Optionally log AI response in the data array
-              // pendingData.push({ role: "assistant", content: aiResponse });
+              console.log("🤖 AI Response:", messageText);
+              await sendText(conversation.conversation_id, from, messageText, botNumber);
 
-              // Update the conversation with the full data array
-              // await query(
-              //   `UPDATE conversations SET data = $1, updated_time = NOW() WHERE conversation_id = $2`,
-              //   [JSON.stringify(pendingData), conversation.conversation_id]
-              // );
+              // Append AI response to data array
+              saveData.push({ role: "assistant", content: messageText });
 
-              // Send AI response to user
-              await sendText(conversation.conversation_id, from, "AI message created", botNumber);
+              // Update conversation in database
+              await query(
+                `UPDATE conversations SET data = $1, updated_time = NOW() WHERE conversation_id = $2`,
+                [JSON.stringify(saveData), conversation.conversation_id]
+              );
+              
             }
 
             return;
@@ -263,79 +266,6 @@ app.post("/webhook", async (req, res) => {
       default:
         console.warn(`Unknown state ${conversation.state} for conversation ${conversation.conversation_id}`);
         break;
-    }
-
-    // --- Handle terms reply buttons ---
-    if (incoming.type === "interactive" && incoming.interactive?.button_reply) {
-      const replyId = incoming.interactive.button_reply.id;
-
-      if (replyId === "continue_terms") {
-        await query(
-          `UPDATE conversations 
-           SET terms_accepted = true, state = 'unstructured', updated_time = NOW() 
-           WHERE conversation_id = $1`,
-          [conversation.conversation_id]
-        );
-
-        // Send back the pending data
-        const resPending = await query(
-          `SELECT first_message FROM conversations WHERE conversation_id = $1`,
-          [conversation.conversation_id]
-        );
-        const pendingData = resPending.rows[0]?.first_message;
-
-        if (pendingData) {
-          await sendText(conversation.conversation_id, from, pendingData, botNumber);
-          await query(
-            `UPDATE conversations SET first_message = NULL, updated_time = NOW() WHERE conversation_id = $1`,
-            [conversation.conversation_id]
-          );
-        }
-        return;
-      }
-
-      if (replyId === "quit_terms") {
-        await query(
-          `UPDATE conversations SET first_message = NULL, state = 'finish', updated_time = NOW() WHERE conversation_id = $1`,
-          [conversation.conversation_id]
-        );
-        await sendText(
-          conversation.conversation_id,
-          from,
-          prompts.quit_response,
-          botNumber
-        );
-        return;
-      }
-    }
-
-    
-
-    // If terms not accepted yet
-    if (!conversation.terms_accepted) {
-      const body = incoming.text?.body || "[Non-text message]";
-
-      // Store the pending message
-      await query(
-        `UPDATE conversations 
-         SET first_message = $1, updated_time = NOW() 
-         WHERE conversation_id = $2`,
-        [body, conversation.conversation_id]
-      );
-
-      // Send Terms & Conditions with Continue/Quit buttons
-      await sendButtons(
-        conversation.conversation_id,
-        from,
-        prompts.terms_of_use_message,
-        [
-          { type: "reply", reply: { id: "continue_terms", title: "Continue" } },
-          { type: "reply", reply: { id: "quit_terms", title: "Quit" } }
-        ],
-        botNumber
-      );
-
-      return; // stop here until terms accepted
     }
 
     // --- Echo back the same text ---
