@@ -179,8 +179,8 @@ app.post("/webhook", async (req, res) => {
               [conversation.conversation_id]
             );
             let pendingData = resPending.rows[0]?.data;
-            let saveData = pendingData;
-            console.log(pendingData);
+            let saveData = resPending.rows[0]?.data;
+            // console.log(pendingData);
 
             if (!pendingData || !Array.isArray(pendingData)) {
               pendingData = [];
