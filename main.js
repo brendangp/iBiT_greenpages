@@ -136,7 +136,7 @@ app.post("/webhook", async (req, res) => {
       // Store the pending message
       await query(
         `UPDATE conversations 
-         SET data = $1 
+         SET data = COALESCE(data, '[]'::jsonb) || to_jsonb($1::text)
          WHERE conversation_id = $2`,
         [body, conversation.conversation_id]
       );
@@ -163,7 +163,7 @@ app.post("/webhook", async (req, res) => {
       if (replyId === "continue_terms") {
         await query(
           `UPDATE conversations 
-           SET terms_accepted = true, state = 'active' 
+           SET terms_accepted = true, state = 'unstructured', data = '[]'::jsonb 
            WHERE conversation_id = $1`,
           [conversation.conversation_id]
         );
@@ -178,7 +178,7 @@ app.post("/webhook", async (req, res) => {
         if (pendingData) {
           await sendText(conversation.conversation_id, from, pendingData, botNumber);
           await query(
-            `UPDATE conversations SET data = NULL WHERE conversation_id = $1`,
+            `UPDATE conversations SET data = '[]'::jsonb WHERE conversation_id = $1`,
             [conversation.conversation_id]
           );
         }
@@ -187,7 +187,7 @@ app.post("/webhook", async (req, res) => {
 
       if (replyId === "quit_terms") {
         await query(
-          `UPDATE conversations SET data = NULL, state = 'finish' WHERE conversation_id = $1`,
+          `UPDATE conversations SET data = '[]'::jsonb, state = 'finish' WHERE conversation_id = $1`,
           [conversation.conversation_id]
         );
         await sendText(
