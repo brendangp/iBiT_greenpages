@@ -152,7 +152,7 @@ app.post("/webhook", async (req, res) => {
           [conversation.conversation_id]
         );
         console.log(resPending);
-        const pendingData = resPending.rows[0]?.data;
+        const pendingData = resPending.rows[0]?.first_message;
 
         if (pendingData) {
           await sendText(conversation.conversation_id, from, pendingData, botNumber);
