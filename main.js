@@ -141,14 +141,14 @@ app.post("/webhook", async (req, res) => {
       if (replyId === "continue_terms") {
         await query(
           `UPDATE conversations 
-           SET terms_accepted = true, state = 'unstructured', data = '[]'::jsonb 
+           SET terms_accepted = true, state = 'unstructured', updated_time = NOW() 
            WHERE conversation_id = $1`,
           [conversation.conversation_id]
         );
 
         // Send back the pending data
         const resPending = await query(
-          `SELECT data FROM conversations WHERE conversation_id = $1`,
+          `SELECT first_message FROM conversations WHERE conversation_id = $1`,
           [conversation.conversation_id]
         );
         const pendingData = resPending.rows[0]?.data;
@@ -156,7 +156,7 @@ app.post("/webhook", async (req, res) => {
         if (pendingData) {
           await sendText(conversation.conversation_id, from, pendingData, botNumber);
           await query(
-            `UPDATE conversations SET data = '[]'::jsonb WHERE conversation_id = $1`,
+            `UPDATE conversations SET first_message = NULL, updated_time = NOW() WHERE conversation_id = $1`,
             [conversation.conversation_id]
           );
         }
@@ -165,7 +165,7 @@ app.post("/webhook", async (req, res) => {
 
       if (replyId === "quit_terms") {
         await query(
-          `UPDATE conversations SET data = '[]'::jsonb, state = 'finish' WHERE conversation_id = $1`,
+          `UPDATE conversations SET first_message = NULL, state = 'finish', updated_time = NOW() WHERE conversation_id = $1`,
           [conversation.conversation_id]
         );
         await sendText(
@@ -185,7 +185,7 @@ app.post("/webhook", async (req, res) => {
       // Store the pending message
       await query(
         `UPDATE conversations 
-         SET data = COALESCE(data, '[]'::jsonb) || to_jsonb($1::text)
+         SET first_message = $1, updated_time = NOW() 
          WHERE conversation_id = $2`,
         [body, conversation.conversation_id]
       );
