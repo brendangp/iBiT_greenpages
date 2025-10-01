@@ -149,28 +149,18 @@ app.post("/webhook", async (req, res) => {
     }
 
     // --- If "form" is typed at any stage, send a Flow ---
-    if (incoming.type === "text" && body && body.trim().toLowerCase() === "form") {
-      await sendFlow(
-        conversation.conversation_id,
-        from,
-        prompts.flow_params.flowId,        // 👈 put your real flow_id in .env
-        prompts.flow_params.flowCta,                // button text
-        "This is a test round first about",                    // could pull from your DB or user profile
-        botNumber
-      );
-      return;
-    }
+    // if (incoming.type === "text" && body && body.trim().toLowerCase() === "form") {
+    //   await sendFlow(
+    //     conversation.conversation_id,
+    //     from,
+    //     prompts.flow_params.flowId,        // 👈 put your real flow_id in .env
+    //     prompts.flow_params.flowCta,                // button text
+    //     "This is a test round first about",                    // could pull from your DB or user profile
+    //     botNumber
+    //   );
+    //   return;
+    // }
 
-    // --- Handle form/flow submission responses ---
-    if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
-      const nfm = incoming.interactive.nfm_reply;
-      try {
-        const responseData = JSON.parse(nfm.response_json);
-        console.log("📋 Received form response:", responseData);
-      } catch (err) {
-        console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
-      }
-    }
     // --- State machine logic ---
     switch (conversation.state) {
       case "active":
@@ -256,7 +246,7 @@ app.post("/webhook", async (req, res) => {
 
       case "unstructured":
 
-        console.log(`🟢 [unstructured] conversation ${conversation.conversation_id}`);
+        // console.log(`🟢 [unstructured] conversation ${conversation.conversation_id}`);
 
         const messageContent = incoming.text?.body || "[Non-text message]";
         const resPending = await query(
@@ -277,34 +267,100 @@ app.post("/webhook", async (req, res) => {
           { role: "system", content: prompts.system_prompt }
         ];
 
-
         const aiResponse = await getResponses(aiInput);
 
         if (aiResponse) {
-          const messageText = aiResponse.text || aiResponse; // safeguard if getResponses returns string
+          const responseType = aiResponse.type || "-";
+          const messageText = aiResponse.text || aiResponse; // fallback
 
-          console.log("🤖 AI Response:", messageText);
-          await sendText(conversation.conversation_id, from, messageText, botNumber);
+          if (responseType === "-") {
+            // 🔹 Standard text response
+            console.log("🤖 AI Response:", messageText);
+            await sendText(conversation.conversation_id, from, messageText, botNumber);
 
-          // Append AI response
-          saveData.push({ role: "assistant", content: messageText });
+            // Save to history
+            saveData.push({ role: "assistant", content: messageText });
+            await query(
+              `UPDATE conversations 
+              SET data = $1, updated_time = NOW() 
+              WHERE conversation_id = $2`,
+              [JSON.stringify(saveData), conversation.conversation_id]
+            );
 
-          // Save both user + assistant messages
-          await query(
-            `UPDATE conversations 
-            SET data = $1, updated_time = NOW() 
-            WHERE conversation_id = $2`,
-            [JSON.stringify(saveData), conversation.conversation_id]
-          );
+          } else if (responseType === "location_request") {
+            
+            console.log("📍 AI requested location flow");
+            await sendFlow(
+              conversation.conversation_id,
+              from,
+              prompts.flow_params.flowId,
+              prompts.flow_params.flowCta,
+              messageText, 
+              botNumber
+            );
+
+            // Save special marker in history
+            saveData.push({ role: "assistant", content: "[Location Flow Sent]" });
+            await query(
+              `UPDATE conversations 
+              SET data = $1, updated_time = NOW(), state = 'structured' 
+              WHERE conversation_id = $2`,
+              [JSON.stringify(saveData), conversation.conversation_id]
+            );
+          } else {
+            console.warn("⚠️ Unknown AI response type:", responseType);
+          }
         }
 
         break;
 
       case "structured":
-        // Placeholder: handle structured conversation
         console.log(`🟡 [structured] conversation ${conversation.conversation_id}`);
-        // TODO: Implement structured logic here
+
+        if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
+          const nfm = incoming.interactive.nfm_reply;
+
+          try {
+            const responseData = JSON.parse(nfm.response_json);
+
+            // Remove flow_token from response
+            const { flow_token, ...savedData } = responseData;
+
+            // Save the response in first_message
+            await query(
+              `UPDATE conversations 
+              SET first_message = $1, updated_time = NOW(), state = 'finish' 
+              WHERE conversation_id = $2`,
+              [JSON.stringify(savedData), conversation.conversation_id]
+            );
+
+            console.log("📋 Received form response:", savedData);
+
+            // Thank the user
+            const botNumber = value?.metadata?.display_phone_number;
+            await sendText(
+              conversation.conversation_id,
+              from,
+              prompts.thank_you_response,
+              botNumber
+            );
+
+          } catch (err) {
+            console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
+          }
+
+        } else {
+          // Not a form response → mark conversation finished
+          console.log("⚠️ Received non-form response in structured state. Finishing conversation.");
+          await query(
+            `UPDATE conversations 
+            SET state = 'finish', updated_time = NOW() 
+            WHERE conversation_id = $1`,
+            [conversation.conversation_id]
+          );
+        }
         break;
+        
 
       case "finish":
         // Nothing happens
