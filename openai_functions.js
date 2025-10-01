@@ -23,8 +23,20 @@ async function getResponses(messages) {
       stop: prompts.model_params.stop
     });
 
-    // Return the content of the first choice
-    return response.choices?.[0]?.message?.content || null;
+    // Get the raw content from OpenAI
+    const rawContent = response.choices?.[0]?.message?.content || null;
+
+    if (!rawContent) return null;
+
+    // Ensure it is returned as JSON
+    try {
+      return typeof rawContent === "string" ? JSON.parse(rawContent) : rawContent;
+    } catch (err) {
+      console.error("❌ Failed to parse AI response as JSON:", err.message);
+      // Optionally wrap it in a default object if parsing fails
+      return { text: rawContent, type: "-" };
+    }
+
   } catch (err) {
     console.error("❌ Error in OpenAI completion request:", err.message || err);
     return null;
