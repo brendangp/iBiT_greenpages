@@ -260,9 +260,11 @@ app.post("/webhook", async (req, res) => {
 
         // Prepare AI input: all history + system prompt
         const aiInput = [
-          ...saveData, // includes user’s new message
+          ...pendingData,
+          { role: "user", content: `± ${messageContent} ±` },  // wrapped only for AI
           { role: "system", content: prompts.system_prompt }
         ];
+
 
         const aiResponse = await getResponses(aiInput);
 

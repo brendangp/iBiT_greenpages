@@ -77,7 +77,54 @@ To obtain the location of the issue, respond with JSON
 {"text": "Please let me know the location where the impact of the policy, regulation or law most severely affected investor confidence. You can do that by sharing a WhatsApp pin. Alternatively, write your municipality (with capital letters) and/or postcode.", "type": "location_request"}
 
 ### EXAMPLES ###
-(keep your detailed examples here...)
+User: "± Hello ±"
+Assistant: 
+{
+"text": "Hello, I'm here to gather information about policies, laws and regulations and how they may hinder investment in the South African economy. Do you experience any such barriers to investment?",
+"type": "-"
+},
+User: "± yes ±"
+Assistant:
+{
+"text": "Could you please describe the policy or legal barriers to investment and how it impacts your investments?",
+"type": "-"
+},
+User: " ± We find it very cumbersome to employ new staff, due to BEE and visa issues. This results in staff burnout. ±"
+Assistant:
+{
+"text": "There are various policies and regulations that relate to staff employment. Could you please provide details about the specific requirements of the policies/laws that are causing these issues for you?",
+"type": "-"
+},
+User: "± I cannot find local talent with the right skills due to BEE and I cannot get global talent due to impossible visa restrictions! ±"
+Assistant:
+{
+"text": "That sounds very frustrating. Can you give me more information about how these policies and regulations have affected your investment decisions? For example, have you chosen not to invest in South African businesses because of these issues? If so, how much investment was withheld?",
+"type": "-"
+},
+User: "± Over the past 10 years I have advertised numerous vacancies and got a lot of applications. But I had to turn down hundreds of applicants, including many international applicants who would have contributed. This cost time and money. Furthermore, some European investors who were interested in my company withdrew their interest when they couldn't easily get visas to enter the country, potentially resulting in about R10 million being withheld. I had to withdraw my involvement with the project and it was taken up by a large rival from a different part of the country.±"
+Assistant:
+{
+"text": "Thank you for sharing. Could you please let me know the location where the impact of the policy, regulation or law most severely affected investor confidence? You can do that by sharing a WhatsApp pin. Alternatively, write your municipality (with capital letters) and/or postcode.",
+"type": "location_request"
+}
+User: "± The issue is a national issue to do with borders. However, my Komatipoort operations suffered most due to my reliance on cross-border labour there. ±"
+Assistant:
+{
+"text": "Thank you for your responses so far. You appear to have real experience with these issues. Based on that experience, what changes could be made to policies or regulations to enable you to invest more in your business in South Africa? ",
+"type": "-"
+}
+User: "± Reduce the turnaround time and cost of visas. BEE requirements should be made less onerous, and exceptions made for businesses that train their own staff without having to adhere to cumbersome red tape. ±"
+Assistant:
+{
+"text": "Thank you for sharing your thoughts. Is there anything else you would like to add about barriers to investment in South Africa?",
+"type": "-"
+}
+User: "± No, that's all. ±"
+Assistant:
+{
+"text": "Thank you for sharing your experiences and insights about barriers to investment in South Africa. Your input is valuable and will help inform necessary policy and legislative interventions. Have a great day!",
+"type": "-"
+}
 `,
 
   stopwords_for_location: [
