@@ -3,12 +3,25 @@ require("dotenv").config();
 const { query } = require("./db");
 const { sendText, sendButtons, markMessageAsRead } = require("./messages");
 const prompts = require("./prompts");
+const { getResponses } = require("./openai_functions");
 
 const app = express();
 app.use(express.json());
 
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+
+async function runExample() {
+  const messages = [
+    { role: "system", content: prompts.system_prompt },
+    { role: "user", content: "±The user input goes here±" }
+  ];
+
+  const result = await getResponses(messages);
+  console.log("AI Response:", result);
+}
+
+runExample();
 
 /* ---------------- Conversations ---------------- */
 async function getOrCreateConversation(phoneNumber) {
@@ -128,11 +141,129 @@ app.post("/webhook", async (req, res) => {
 
     // --- Log inbound message ---
     const botNumber = value?.metadata?.display_phone_number;
-
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
-
-    // --- Mark inbound as read ---
     await markMessageAsRead(wamid);
+
+    // --- If Quit is typed at any stage, perform the following ---
+    if ( incoming.type === "text" && body && body.trim().toLowerCase() === "quit") {
+      await query(
+        `UPDATE conversations SET first_message = NULL, state = 'finish', updated_time = NOW() WHERE conversation_id = $1`,
+        [conversation.conversation_id]
+      );
+      await sendText(
+        conversation.conversation_id,
+        from,
+        prompts.quit_response,
+        botNumber
+      );
+      return;
+    }
+
+    // --- State machine logic ---
+    switch (conversation.state) {
+      case "active":
+        // Handle interactive buttons first
+        if (incoming.type === "interactive" && incoming.interactive?.button_reply) {
+          const replyId = incoming.interactive.button_reply.id;
+
+          if (replyId === "continue_terms") {
+            await query(
+              `UPDATE conversations 
+               SET terms_accepted = true, state = 'unstructured', updated_time = NOW() 
+               WHERE conversation_id = $1`,
+              [conversation.conversation_id]
+            );
+
+            const resPending = await query(
+              `SELECT data FROM conversations WHERE conversation_id = $1`,
+              [conversation.conversation_id]
+            );
+            let pendingData = resPending.rows[0]?.data;
+            console.log(pendingData);
+
+            if (!pendingData || !Array.isArray(pendingData)) {
+              pendingData = [];
+            }
+
+            // --- Append system prompt for OpenAI ---
+            pendingData.push({ role: "system", content: prompts.system_prompt });
+
+            const aiResponse = await getResponses(pendingData);
+            if (aiResponse) {
+              console.log("🤖 AI Response:", aiResponse);
+
+              // Optionally log AI response in the data array
+              // pendingData.push({ role: "assistant", content: aiResponse });
+
+              // Update the conversation with the full data array
+              // await query(
+              //   `UPDATE conversations SET data = $1, updated_time = NOW() WHERE conversation_id = $2`,
+              //   [JSON.stringify(pendingData), conversation.conversation_id]
+              // );
+
+              // Send AI response to user
+              await sendText(conversation.conversation_id, from, "AI message created", botNumber);
+            }
+
+            return;
+          }
+
+          if (replyId === "quit_terms") {
+            await query(
+              `UPDATE conversations SET first_message = NULL, state = 'finish', updated_time = NOW() WHERE conversation_id = $1`,
+              [conversation.conversation_id]
+            );
+            await sendText(conversation.conversation_id, from, prompts.quit_response, botNumber);
+            return;
+          }
+        }
+
+        // Terms not accepted yet: store pending message and send terms
+        if (!conversation.terms_accepted) {
+          const messageContent = incoming.text?.body || "[Non-text message]";
+          const dataArray = [{ role: "user", content: messageContent }];
+
+          await query(
+            `UPDATE conversations 
+            SET data = $1, updated_time = NOW() 
+            WHERE conversation_id = $2`,
+            [JSON.stringify(dataArray), conversation.conversation_id]
+          );
+
+          await sendButtons(
+            conversation.conversation_id,
+            from,
+            prompts.terms_of_use_message,
+            [
+              { type: "reply", reply: { id: "continue_terms", title: "Continue" } },
+              { type: "reply", reply: { id: "quit_terms", title: "Quit" } }
+            ],
+            botNumber
+          );
+        }
+        break;
+
+      case "unstructured":
+        // Placeholder: handle OpenAI-based unstructured conversation
+        console.log(`🟢 [unstructured] conversation ${conversation.conversation_id}`);
+        // TODO: Call OpenAI here
+        break;
+
+      case "structured":
+        // Placeholder: handle structured conversation
+        console.log(`🟡 [structured] conversation ${conversation.conversation_id}`);
+        // TODO: Implement structured logic here
+        break;
+
+      case "finish":
+        // Nothing happens
+        console.log(`⚪ Conversation ${conversation.conversation_id} is finished`);
+        break;
+
+      default:
+        console.warn(`Unknown state ${conversation.state} for conversation ${conversation.conversation_id}`);
+        break;
+    }
 
     // --- Handle terms reply buttons ---
     if (incoming.type === "interactive" && incoming.interactive?.button_reply) {
@@ -151,7 +282,6 @@ app.post("/webhook", async (req, res) => {
           `SELECT first_message FROM conversations WHERE conversation_id = $1`,
           [conversation.conversation_id]
         );
-        console.log(resPending);
         const pendingData = resPending.rows[0]?.first_message;
 
         if (pendingData) {
@@ -178,6 +308,8 @@ app.post("/webhook", async (req, res) => {
         return;
       }
     }
+
+    
 
     // If terms not accepted yet
     if (!conversation.terms_accepted) {

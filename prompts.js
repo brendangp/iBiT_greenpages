@@ -98,5 +98,14 @@ To obtain the location of the issue, respond with JSON
     "in",
     "the",
     "is"
-  ]
+  ],
+
+  // ---------------- Model parameters ----------------
+  model_params: {
+    model: "gpt-4o",
+    max_tokens: 400,
+    temperature: 0.5,
+    n: 1,
+    stop: null
+  }
 };
