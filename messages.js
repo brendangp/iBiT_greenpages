@@ -179,6 +179,34 @@ async function sendFlow(conversationId, to, flowId, flowCta, body, botNumber = n
   }
 }
 
+async function sendLocationRequest(conversationId, to, bodyText, botNumber) {
+  try {
+    const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "location_request_message",
+        body: { text: bodyText },
+        action: { 
+          name: "send_location" 
+        },
+      },
+    });
+
+    const wamid = res.data?.messages?.[0]?.id;
+    if (wamid) {
+      // Log outbound message
+      await logOutboundMessage(conversationId, wamid, to, "location_request", bodyText, botNumber);
+    }
+
+    console.log(`📍 Sent location request to ${to}`);
+    return wamid;
+  } catch (err) {
+    console.error("❌ Failed to send location request:", err.response?.data || err.message);
+  }
+}
+
 async function markMessageAsRead(messageId) {
   try {
     // --- Mark as read in WhatsApp API
@@ -211,5 +239,6 @@ module.exports = {
   sendText,
   sendButtons,
   sendFlow,
+  sendLocationRequest,
   markMessageAsRead,
 };

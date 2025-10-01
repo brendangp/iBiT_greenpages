@@ -1,7 +1,7 @@
 const express = require("express");
 require("dotenv").config();
 const { query } = require("./db");
-const { sendText, sendButtons, sendFlow, markMessageAsRead } = require("./messages");
+const { sendText, sendButtons, sendFlow, sendLocationRequest, markMessageAsRead } = require("./messages");
 const prompts = require("./prompts");
 const { getResponses } = require("./openai_functions");
 
@@ -9,8 +9,6 @@ const app = express();
 app.use(express.json());
 
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-
 
 /* ---------------- Conversations ---------------- */
 async function getOrCreateConversation(phoneNumber) {
@@ -329,7 +327,7 @@ app.post("/webhook", async (req, res) => {
             // Save the response in first_message
             await query(
               `UPDATE conversations 
-              SET first_message = $1, updated_time = NOW(), state = 'finish' 
+              SET first_message = $1, updated_time = NOW()
               WHERE conversation_id = $2`,
               [JSON.stringify(savedData), conversation.conversation_id]
             );
@@ -338,16 +336,56 @@ app.post("/webhook", async (req, res) => {
 
             // Thank the user
             const botNumber = value?.metadata?.display_phone_number;
-            await sendText(
-              conversation.conversation_id,
-              from,
-              prompts.thank_you_response,
-              botNumber
-            );
 
+            // If region is municipal, ask for location and keep state structured
+            if (savedData.region?.toLowerCase() === "municipal") {
+              await sendLocationRequest(
+                conversation.conversation_id,
+                from,
+                "Please provide us with the location where this is taking place.", // your custom message text
+                botNumber
+              );
+
+              console.log("📍 Waiting for location from user...");
+
+            } else {
+              // Otherwise, thank the user and finish conversation
+              await sendText(
+                conversation.conversation_id,
+                from,
+                prompts.response_to_location_pin,
+                botNumber
+              );
+
+              await query(
+                `UPDATE conversations 
+                SET state = 'finish', updated_time = NOW() 
+                WHERE conversation_id = $1`,
+                [conversation.conversation_id]
+              );
+            }
           } catch (err) {
             console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
           }
+
+        } else if (incoming.type === "location") {
+          // Log user location
+          console.log("📍 User sent location:", incoming.location);
+
+          // Mark conversation finished
+          await query(
+            `UPDATE conversations 
+            SET state = 'finish', updated_time = NOW() 
+            WHERE conversation_id = $1`,
+            [conversation.conversation_id]
+          );
+
+          await sendText(
+            conversation.conversation_id,
+            from,
+            prompts.response_to_location_pin, // your thank-you text
+            value?.metadata?.display_phone_number
+          );
 
         } else {
           // Not a form response → mark conversation finished
