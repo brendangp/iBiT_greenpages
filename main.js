@@ -134,33 +134,6 @@ app.post("/webhook", async (req, res) => {
     // --- Mark inbound as read ---
     await markMessageAsRead(wamid);
 
-    // If terms not accepted yet
-    if (!conversation.terms_accepted) {
-      const body = incoming.text?.body || "[Non-text message]";
-
-      // Store the pending message
-      await query(
-        `UPDATE conversations 
-         SET data = COALESCE(data, '[]'::jsonb) || to_jsonb($1::text)
-         WHERE conversation_id = $2`,
-        [body, conversation.conversation_id]
-      );
-
-      // Send Terms & Conditions with Continue/Quit buttons
-      await sendButtons(
-        conversation.conversation_id,
-        from,
-        prompts.terms_of_use_message,
-        [
-          { type: "reply", reply: { id: "continue_terms", title: "Continue" } },
-          { type: "reply", reply: { id: "quit_terms", title: "Quit" } }
-        ],
-        botNumber
-      );
-      
-      return; // stop here until terms accepted
-    }
-
     // --- Handle terms reply buttons ---
     if (incoming.type === "interactive" && incoming.interactive?.button_reply) {
       const replyId = incoming.interactive.button_reply.id;
@@ -203,6 +176,33 @@ app.post("/webhook", async (req, res) => {
         );
         return;
       }
+    }
+
+    // If terms not accepted yet
+    if (!conversation.terms_accepted) {
+      const body = incoming.text?.body || "[Non-text message]";
+
+      // Store the pending message
+      await query(
+        `UPDATE conversations 
+         SET data = COALESCE(data, '[]'::jsonb) || to_jsonb($1::text)
+         WHERE conversation_id = $2`,
+        [body, conversation.conversation_id]
+      );
+
+      // Send Terms & Conditions with Continue/Quit buttons
+      await sendButtons(
+        conversation.conversation_id,
+        from,
+        prompts.terms_of_use_message,
+        [
+          { type: "reply", reply: { id: "continue_terms", title: "Continue" } },
+          { type: "reply", reply: { id: "quit_terms", title: "Quit" } }
+        ],
+        botNumber
+      );
+
+      return; // stop here until terms accepted
     }
 
     // --- Echo back the same text ---
