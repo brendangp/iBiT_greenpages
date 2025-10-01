@@ -129,6 +129,11 @@ app.post("/webhook", async (req, res) => {
     // --- Log inbound message ---
     const botNumber = value?.metadata?.display_phone_number;
 
+    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
+
+    // --- Mark inbound as read ---
+    await markMessageAsRead(wamid);
+
     // If terms not accepted yet
     if (!conversation.terms_accepted) {
       const body = incoming.text?.body || "[Non-text message]";
@@ -152,7 +157,7 @@ app.post("/webhook", async (req, res) => {
         ],
         botNumber
       );
-
+      
       return; // stop here until terms accepted
     }
 
@@ -199,11 +204,6 @@ app.post("/webhook", async (req, res) => {
         return;
       }
     }
-
-    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
-
-    // --- Mark inbound as read ---
-    await markMessageAsRead(wamid);
 
     // --- Echo back the same text ---
     // if (body) {

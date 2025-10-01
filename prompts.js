@@ -2,11 +2,8 @@
 module.exports = {
   terms_of_use_message: `
 The terms of use of this chatbot are available at https://policyinnovationlab.sun.ac.za/. 
-The information you voluntarily provide will be used for documenting service delivery issues in South Africa 
-and may be made publicly available. By continuing this conversation, you confirm that you are over 18 years of age, 
-have read, understand, and agree to the terms of use, and are choosing to voluntarily participate. 
 
-Reply 'Y' to accept and continue. Reply 'Q' to have this conversation deleted.
+The information you voluntarily provide will be used for documenting service delivery issues in South Africa and may be made publicly available. By continuing this conversation, you confirm that you are over 18 years of age, have read, understand, and agree to the terms of use, and are choosing to voluntarily participate.
 `,
 
   quit_response: `
