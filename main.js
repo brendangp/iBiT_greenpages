@@ -243,9 +243,47 @@ app.post("/webhook", async (req, res) => {
         break;
 
       case "unstructured":
-        // Placeholder: handle OpenAI-based unstructured conversation
+
         console.log(`🟢 [unstructured] conversation ${conversation.conversation_id}`);
-        // TODO: Call OpenAI here
+
+        const messageContent = incoming.text?.body || "[Non-text message]";
+        const resPending = await query(
+          `SELECT data FROM conversations WHERE conversation_id = $1`,
+          [conversation.conversation_id]
+        );
+
+        let pendingData = resPending.rows[0]?.data || [];
+        let saveData = [...pendingData]; // copy of conversation history
+
+        // Add the new user message to both saveData and AI input
+        saveData.push({ role: "user", content: messageContent });
+
+        // Prepare AI input: all history + system prompt
+        const aiInput = [
+          ...saveData, // includes user’s new message
+          { role: "system", content: prompts.system_prompt }
+        ];
+
+        const aiResponse = await getResponses(aiInput);
+
+        if (aiResponse) {
+          const messageText = aiResponse.text || aiResponse; // safeguard if getResponses returns string
+
+          console.log("🤖 AI Response:", messageText);
+          await sendText(conversation.conversation_id, from, messageText, botNumber);
+
+          // Append AI response
+          saveData.push({ role: "assistant", content: messageText });
+
+          // Save both user + assistant messages
+          await query(
+            `UPDATE conversations 
+            SET data = $1, updated_time = NOW() 
+            WHERE conversation_id = $2`,
+            [JSON.stringify(saveData), conversation.conversation_id]
+          );
+        }
+
         break;
 
       case "structured":
