@@ -371,21 +371,43 @@ app.post("/webhook", async (req, res) => {
         } else if (incoming.type === "location") {
           // Log user location
           console.log("📍 User sent location:", incoming.location);
+          const botNumber = value?.metadata?.display_phone_number;
+
+          // Fetch existing first_message
+          const res = await query(
+            `SELECT first_message FROM conversations WHERE conversation_id = $1`,
+            [conversation.conversation_id]
+          );
+
+          let firstMessageData = {};
+          try {
+            firstMessageData = res.rows[0]?.first_message
+              ? JSON.parse(res.rows[0].first_message)
+              : {};
+          } catch (err) {
+            console.error("❌ Failed to parse existing first_message JSON:", err.message);
+          }
+
+          // Store the entire location object
+          firstMessageData.location = incoming.location;
 
           // Mark conversation finished
           await query(
             `UPDATE conversations 
-            SET state = 'finish', updated_time = NOW() 
-            WHERE conversation_id = $1`,
-            [conversation.conversation_id]
+            SET state = 'finish', updated_time = NOW(), first_message = $1 
+            WHERE conversation_id = $2`,
+            [JSON.stringify(firstMessageData), conversation.conversation_id]
           );
 
           await sendText(
             conversation.conversation_id,
             from,
             prompts.response_to_location_pin, // your thank-you text
-            value?.metadata?.display_phone_number
+            botNumber
           );
+
+          // Log updated first_message
+          console.log("📋 Updated first_message with location:", firstMessageData);
 
         } else {
           // Not a form response → mark conversation finished
