@@ -11,17 +11,6 @@ app.use(express.json());
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
-async function runExample() {
-  const messages = [
-    { role: "system", content: prompts.system_prompt },
-    { role: "user", content: "±The user input goes here±" }
-  ];
-
-  const result = await getResponses(messages);
-  console.log("AI Response:", result);
-}
-
-runExample();
 
 /* ---------------- Conversations ---------------- */
 async function getOrCreateConversation(phoneNumber) {
@@ -159,6 +148,29 @@ app.post("/webhook", async (req, res) => {
       return;
     }
 
+    // --- If "form" is typed at any stage, send a Flow ---
+    if (incoming.type === "text" && body && body.trim().toLowerCase() === "form") {
+      await sendFlow(
+        conversation.conversation_id,
+        from,
+        prompts.flow_params.flowId,        // 👈 put your real flow_id in .env
+        prompts.flow_params.flowCta,                // button text
+        "This is a test round first about",                    // could pull from your DB or user profile
+        botNumber
+      );
+      return;
+    }
+
+    // --- Handle form/flow submission responses ---
+    if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
+      const nfm = incoming.interactive.nfm_reply;
+      try {
+        const responseData = JSON.parse(nfm.response_json);
+        console.log("📋 Received form response:", responseData);
+      } catch (err) {
+        console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
+      }
+    }
     // --- State machine logic ---
     switch (conversation.state) {
       case "active":

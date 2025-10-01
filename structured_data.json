@@ -1,0 +1,244 @@
+{
+    "version": "7.2",
+    "screens": [
+        {
+            "id": "business_info",
+            "terminal": true,
+            "title": "Business Information",
+            "data": {},
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "Form",
+                        "name": "form",
+                        "children": [
+                            {
+                                "type": "TextHeading",
+                                "text": "Last few questions from us!"
+                            },
+                            {
+                                "type": "TextBody",
+                                "text": "What Sector does your business operate in?"
+                            },
+                            {
+                                "type": "Dropdown",
+                                "name": "sectors",
+                                "label": "Choose you Sector",
+                                "required": true,
+                                "data-source": [
+                                    {
+                                        "id": "agri",
+                                        "title": "Agriculture, forestry, and fishing"
+                                    },
+                                    {
+                                        "id": "mining",
+                                        "title": "Mining and quarrying"
+                                    },
+                                    {
+                                        "id": "manufacturing",
+                                        "title": "Manufacturing"
+                                    },
+                                    {
+                                        "id": "utilities",
+                                        "title": "Electricity, gas, and water"
+                                    },
+                                    {
+                                        "id": "construction",
+                                        "title": "Construction"
+                                    },
+                                    {
+                                        "id": "trade",
+                                        "title": "Trade, catering and accommodation"
+                                    },
+                                    {
+                                        "id": "transport",
+                                        "title": "Transport, storage and communication"
+                                    },
+                                    {
+                                        "id": "finance",
+                                        "title": "Finance, real estate, and business services"
+                                    },
+                                    {
+                                        "id": "government",
+                                        "title": "General government services"
+                                    },
+                                    {
+                                        "id": "personal",
+                                        "title": "Personal services"
+                                    },
+                                    {
+                                        "id": "tourism",
+                                        "title": "Tourism"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "TextBody",
+                                "text": "What is roughly the size of your business?"
+                            },
+                            {
+                                "type": "Dropdown",
+                                "name": "business_size",
+                                "label": "Size of business",
+                                "required": true,
+                                "data-source": [
+                                    {
+                                        "id": "startup",
+                                        "title": "Startup",
+                                        "description": "Just getting started"
+                                    },
+                                    {
+                                        "id": "micro",
+                                        "title": "Micro",
+                                        "description": "(R0 – R10 million turnover)"
+                                    },
+                                    {
+                                        "id": "small",
+                                        "title": "Small",
+                                        "description": "(R10 million – R 50 million turnover)"
+                                    },
+                                    {
+                                        "id": "large",
+                                        "title": "Large",
+                                        "description": "(above R50 million turnover)"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "RadioButtonsGroup",
+                                "name": "nationality",
+                                "required": true,
+                                "label": "Are you a local or foreign investor/businessman?",
+                                "data-source": [
+                                    {
+                                        "id": "local",
+                                        "title": "Local"
+                                    },
+                                    {
+                                        "id": "foreign",
+                                        "title": "Foreign"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "RadioButtonsGroup",
+                                "name": "region",
+                                "required": true,
+                                "label": "Which region does the specific law apply to?",
+                                "data-source": [
+                                    {
+                                        "id": "national",
+                                        "title": "National"
+                                    },
+                                    {
+                                        "id": "provincial",
+                                        "title": "Provincial"
+                                    },
+                                    {
+                                        "id": "municipal",
+                                        "title": "Municipal"
+                                    },
+                                    {
+                                        "id": "unkown",
+                                        "title": "Unkown"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "Switch",
+                                "value": "${form.region}",
+                                "cases": {
+                                    "national": [
+                                        {
+                                            "type": "TextBody",
+                                            "text": "Thanks for submitting."
+                                        }
+                                    ],
+                                    "provincial": [
+                                        {
+                                            "type": "Dropdown",
+                                            "name": "provincial",
+                                            "label": "Which province?",
+                                            "required": true,
+                                            "data-source": [
+                                                {
+                                                    "id": "wc",
+                                                    "title": "Western Cape"
+                                                },
+                                                {
+                                                    "id": "nc",
+                                                    "title": "Northern Cape"
+                                                },
+                                                {
+                                                    "id": "ec",
+                                                    "title": "Eastern Cape"
+                                                },
+                                                {
+                                                    "id": "fs",
+                                                    "title": "Free State"
+                                                },
+                                                {
+                                                    "id": "nw",
+                                                    "title": "North West"
+                                                },
+                                                {
+                                                    "id": "kzn",
+                                                    "title": "KwaZulu-Natal"
+                                                },
+                                                {
+                                                    "id": "mp",
+                                                    "title": "Mpumalanga"
+                                                },
+                                                {
+                                                    "id": "gp",
+                                                    "title": "Gauteng"
+                                                },
+                                                {
+                                                    "id": "lp",
+                                                    "title": "Limpopo"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "municipal": [
+                                        {
+                                            "type": "TextBody",
+                                            "text": "Click submit and then submit your location."
+                                        }
+                                    ],
+                                    "unkown": [
+                                        {
+                                            "type": "TextBody",
+                                            "text": "Thanks for submitting."
+                                        }
+                                    ],
+                                    "default": [
+                                        {
+                                            "type": "TextBody",
+                                            "text": "Almost there..."
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Submit",
+                                "on-click-action": {
+                                    "name": "complete",
+                                    "payload": {
+                                        "sector": "${form.sectors}",
+                                        "business_size": "${form.business_size}",
+                                        "nationality": "${form.nationality}",
+                                        "region": "${form.region}",
+                                        "province": "${form.provincial}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

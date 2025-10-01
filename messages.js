@@ -141,6 +141,43 @@ async function sendButtons(conversationId, to, bodyText, buttons, botNumber) {
   }
 }
 
+async function sendFlow(conversationId, to, flowId, flowCta, body, botNumber = null) {
+  try {
+    const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "flow",
+        body: {
+          text: body
+        },
+        action: {
+          name: "flow",
+          parameters: {
+            flow_id: flowId,
+            flow_cta: flowCta,
+            flow_action: "navigate",
+            flow_message_version: "3"
+          }
+        }
+      }
+    });
+
+    const wamid = res.data?.messages?.[0]?.id;
+    if (wamid) {
+      await query(
+        `INSERT INTO messages (conversation_id, wamid, direction, from_number, to_number, type, body, created_time)
+         VALUES ($1, $2, 'outbound', $3, $4, $5, $6, NOW())`,
+        [conversationId, wamid, botNumber || "system", to, "flow", `FLOW:${flowId}`]
+      );
+    }
+
+    console.log(`✅ Sent flow ${flowId} to ${to}`);
+  } catch (err) {
+    console.error("❌ Failed to send flow:", err.response?.data || err.message);
+  }
+}
 
 async function markMessageAsRead(messageId) {
   try {
@@ -173,5 +210,6 @@ module.exports = {
   sendURLButton,
   sendText,
   sendButtons,
+  sendFlow,
   markMessageAsRead,
 };
