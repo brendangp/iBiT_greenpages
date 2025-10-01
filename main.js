@@ -151,6 +151,7 @@ app.post("/webhook", async (req, res) => {
           `SELECT first_message FROM conversations WHERE conversation_id = $1`,
           [conversation.conversation_id]
         );
+        console.log(resPending);
         const pendingData = resPending.rows[0]?.data;
 
         if (pendingData) {
