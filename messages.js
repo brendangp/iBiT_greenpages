@@ -116,9 +116,9 @@ async function sendText(conversationId, to, text, botNumber) {
 }
 
 /// Send quick reply buttons (e.g. Continue/Quit)
-async function sendButtons(conversationId, to, bodyText, buttons, botNumber) {
+async function sendButtons(conversationId, to, bodyText, buttons, botNumber, footerText = null) {
   try {
-    const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
+    const payload = {
       messaging_product: "whatsapp",
       to,
       type: "interactive",
@@ -127,7 +127,14 @@ async function sendButtons(conversationId, to, bodyText, buttons, botNumber) {
         body: { text: bodyText },
         action: { buttons },
       },
-    });
+    };
+
+    // Add footer only if provided
+    if (footerText) {
+      payload.interactive.footer = { text: footerText };
+    }
+
+    const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, payload);
 
     const wamid = res.data?.messages?.[0]?.id;
     if (wamid) {
@@ -141,17 +148,15 @@ async function sendButtons(conversationId, to, bodyText, buttons, botNumber) {
   }
 }
 
-async function sendFlow(conversationId, to, flowId, flowCta, body, botNumber = null) {
+async function sendFlow(conversationId, to, flowId, flowCta, body, botNumber = null, footerText = null) {
   try {
-    const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, {
+    const payload = {
       messaging_product: "whatsapp",
       to,
       type: "interactive",
       interactive: {
         type: "flow",
-        body: {
-          text: body
-        },
+        body: { text: body },
         action: {
           name: "flow",
           parameters: {
@@ -162,7 +167,14 @@ async function sendFlow(conversationId, to, flowId, flowCta, body, botNumber = n
           }
         }
       }
-    });
+    };
+
+    // Add footer only if provided
+    if (footerText) {
+      payload.interactive.footer = { text: footerText };
+    }
+
+    const res = await api.post(`/${PHONE_NUMBER_ID}/messages`, payload);
 
     const wamid = res.data?.messages?.[0]?.id;
     if (wamid) {

@@ -237,7 +237,8 @@ app.post("/webhook", async (req, res) => {
               { type: "reply", reply: { id: "continue_terms", title: "Continue" } },
               { type: "reply", reply: { id: "quit_terms", title: "Quit" } }
             ],
-            botNumber
+            botNumber,
+            prompts.terms_of_use_footer
           );
         }
         break;
@@ -270,7 +271,8 @@ app.post("/webhook", async (req, res) => {
             prompts.flow_params.flowId,
             prompts.flow_params.flowCta,
             "You've reached the message limit, please complete this form.",
-            botNumber
+            botNumber,
+            "Powered by greenpages.app"
           );
 
           // Save conversation state + message limit
@@ -320,7 +322,8 @@ app.post("/webhook", async (req, res) => {
               prompts.flow_params.flowId,
               prompts.flow_params.flowCta,
               messageText, 
-              botNumber
+              botNumber,
+              "Powered by greenpages.app"
             );
 
             // Save special marker in history
