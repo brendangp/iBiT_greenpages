@@ -8,7 +8,7 @@ The information you voluntarily provide will be used for documenting service del
 
   response_to_location_pin: `Thank you for sharing your location pin. Can you tell me anything else about the barrier to investment that could be helpful?`,
 
-  terms_of_use_footer: "Type QUIT at anytime if you wish to delete your data and end this chat.",
+  terms_of_use_footer: "Type QUIT at anytime if you wish to delete your data.", // Has to be less than 60 characters
 
   emergency_prompt: `You are an agent that labels messages "emergency" if they are about critical ongoing emergency situation. 
 Label them "-" otherwise.
