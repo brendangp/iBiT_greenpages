@@ -149,5 +149,5 @@ Assistant:
     flowCta: "Answer Questions",
   },
 
-  message_limt: 3
+  message_limt: 20
 };

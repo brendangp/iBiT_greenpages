@@ -112,7 +112,7 @@ app.post("/webhook", async (req, res) => {
     const incomingStatus = value?.statuses?.[0];
     if (incomingStatus) {
       await updateMessageStatus(incomingStatus.id, incomingStatus.status);
-      console.log(`📊 Status update for ${incomingStatus.id}: ${incomingStatus.status}`);
+      // console.log(`📊 Status update for ${incomingStatus.id}: ${incomingStatus.status}`);
       return;
     }
 
@@ -339,7 +339,7 @@ app.post("/webhook", async (req, res) => {
         break;
 
       case "structured":
-        console.log(`🟡 [structured] conversation ${conversation.conversation_id}`);
+        // console.log(`🟡 [structured] conversation ${conversation.conversation_id}`);
 
         if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
           const nfm = incoming.interactive.nfm_reply;
@@ -358,7 +358,7 @@ app.post("/webhook", async (req, res) => {
               [JSON.stringify(savedData), conversation.conversation_id]
             );
 
-            console.log("📋 Received form response:", savedData);
+            // console.log("📋 Received form response:", savedData);
 
             // Thank the user
             const botNumber = value?.metadata?.display_phone_number;
@@ -372,7 +372,7 @@ app.post("/webhook", async (req, res) => {
                 botNumber
               );
 
-              console.log("📍 Waiting for location from user...");
+              // console.log("📍 Waiting for location from user...");
 
             } else {
               // Otherwise, thank the user and finish conversation
@@ -396,7 +396,7 @@ app.post("/webhook", async (req, res) => {
 
         } else if (incoming.type === "location") {
           // Log user location
-          console.log("📍 User sent location:", incoming.location);
+          // console.log("📍 User sent location:", incoming.location);
           const botNumber = value?.metadata?.display_phone_number;
 
           // Fetch existing first_message
@@ -433,7 +433,7 @@ app.post("/webhook", async (req, res) => {
           );
 
           // Log updated first_message
-          console.log("📋 Updated first_message with location:", firstMessageData);
+          // console.log("📋 Updated first_message with location:", firstMessageData);
 
         } else {
           // Not a form response → mark conversation finished
