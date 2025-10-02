@@ -258,6 +258,32 @@ app.post("/webhook", async (req, res) => {
         // Add the new user message to both saveData and AI input
         saveData.push({ role: "user", content: messageContent });
 
+        // Count user messages
+        const userMessageCount = pendingData.filter(msg => msg.role === "user").length;
+        console.log(`📝 User message count: ${userMessageCount}`);
+
+        if (userMessageCount + 1 >= prompts.message_limt) {
+          
+          await sendFlow(
+            conversation.conversation_id,
+            from,
+            prompts.flow_params.flowId,
+            prompts.flow_params.flowCta,
+            "You've reached the message limit, please complete this form.",
+            botNumber
+          );
+
+          // Save conversation state + message limit
+          await query(
+            `UPDATE conversations 
+            SET data = $1, updated_time = NOW(), state = 'structured', message_limit = $2 
+            WHERE conversation_id = $3`,
+            [JSON.stringify(saveData), userMessageCount + 1, conversation.conversation_id]
+          );
+
+          break; // ⛔ stop further AI processing
+        }
+
         // Prepare AI input: all history + system prompt
         const aiInput = [
           ...pendingData,
@@ -280,9 +306,9 @@ app.post("/webhook", async (req, res) => {
             saveData.push({ role: "assistant", content: messageText });
             await query(
               `UPDATE conversations 
-              SET data = $1, updated_time = NOW() 
-              WHERE conversation_id = $2`,
-              [JSON.stringify(saveData), conversation.conversation_id]
+              SET data = $1, updated_time = NOW(), message_limit = $2 
+              WHERE conversation_id = $3`,
+              [JSON.stringify(saveData), userMessageCount + 1, conversation.conversation_id]
             );
 
           } else if (responseType === "location_request") {
@@ -301,9 +327,9 @@ app.post("/webhook", async (req, res) => {
             saveData.push({ role: "assistant", content: "[Location Flow Sent]" });
             await query(
               `UPDATE conversations 
-              SET data = $1, updated_time = NOW(), state = 'structured' 
-              WHERE conversation_id = $2`,
-              [JSON.stringify(saveData), conversation.conversation_id]
+              SET data = $1, updated_time = NOW(), state = 'structured', message_limit = $2 
+              WHERE conversation_id = $3`,
+              [JSON.stringify(saveData), userMessageCount + 1, conversation.conversation_id]
             );
           } else {
             console.warn("⚠️ Unknown AI response type:", responseType);

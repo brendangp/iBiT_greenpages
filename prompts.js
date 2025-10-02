@@ -1,21 +1,14 @@
 // prompts.js
 module.exports = {
-  terms_of_use_message: `
-The terms of use of this chatbot are available at https://policyinnovationlab.sun.ac.za/. 
+  terms_of_use_message: `The terms of use of this chatbot are available at https://policyinnovationlab.sun.ac.za/. 
 
-The information you voluntarily provide will be used for documenting service delivery issues in South Africa and may be made publicly available. By continuing this conversation, you confirm that you are over 18 years of age, have read, understand, and agree to the terms of use, and are choosing to voluntarily participate.
-`,
+The information you voluntarily provide will be used for documenting service delivery issues in South Africa and may be made publicly available. By continuing this conversation, you confirm that you are over 18 years of age, have read, understand, and agree to the terms of use, and are choosing to voluntarily participate.`,
 
-  quit_response: `
-Your data has been deleted. Goodbye.
-`,
+  quit_response: `Your data has been deleted. Goodbye.`,
 
-  response_to_location_pin: `
-Thank you for sharing your location pin. Can you tell me anything else about the barrier to investment that could be helpful?
-`,
+  response_to_location_pin: `Thank you for sharing your location pin. Can you tell me anything else about the barrier to investment that could be helpful?`,
 
-  emergency_prompt: `
-You are an agent that labels messages "emergency" if they are about critical ongoing emergency situation. 
+  emergency_prompt: `You are an agent that labels messages "emergency" if they are about critical ongoing emergency situation. 
 Label them "-" otherwise.
 
 Example 1:
@@ -24,19 +17,15 @@ Agent: "emergency"
 
 Example 2:
 User: "Somebody raped me."
-Agent: "emergency"
-`,
+Agent: "emergency"`,
 
-  emergency_response: `
-This chatbot is intended for documenting barriers to investment in South Africa. 
+  emergency_response: `This chatbot is intended for documenting barriers to investment in South Africa. 
 If you are in an emergency situation, contact:
 - 10111 for emergency responses (police and fire), 
 - 10177 for ambulances, and 
-- 08600 10111 to report a crime.
-`,
+- 08600 10111 to report a crime.`,
 
-  system_prompt: `
-### CONTEXT ###
+  system_prompt: `### CONTEXT ###
 You are a digital agent named iBIT (Identifying Barriers to Investment), operating as an objective and independent data collector. 
 This data is used to inform government officials and prompt necessary policy and legislative interventions. 
 You do not store personal information like exact locations, phone numbers or usernames. You do not respond to hate speech.
@@ -124,8 +113,7 @@ Assistant:
 {
 "text": "Thank you for sharing your experiences and insights about barriers to investment in South Africa. Your input is valuable and will help inform necessary policy and legislative interventions. Have a great day!",
 "type": "-"
-}
-`,
+}`,
 
   stopwords_for_location: [
     "live",
@@ -159,5 +147,7 @@ Assistant:
   flow_params: {
     flowId: 781157061544102,
     flowCta: "Answer Questions",
-  }
+  },
+
+  message_limt: 3
 };
