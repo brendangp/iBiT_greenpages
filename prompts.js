@@ -4,7 +4,7 @@ module.exports = {
 
 The information you voluntarily provide will be used for documenting service delivery issues in South Africa and may be made publicly available. By continuing this conversation, you confirm that you are over 18 years of age, have read, understand, and agree to the terms of use, and are choosing to voluntarily participate.`,
 
-  quit_response: `Your data has been deleted. Goodbye.`,
+  quit_response: `Your data has been deleted. Have a good day further!`,
 
   response_to_location_pin: `Thank you for sharing your location pin. Can you tell me anything else about the barrier to investment that could be helpful?`,
 
@@ -153,3 +153,4 @@ Assistant:
 
   message_limt: 20
 };
+
