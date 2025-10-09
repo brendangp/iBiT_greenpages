@@ -1,6 +1,6 @@
 // prompts.js
 module.exports = {
-  terms_of_use_message: `Hello and thanks for WhatsApping me! I am iBIT, a chatbot for business owners and investors to collect data on the policy and regulatory barriers to investing in South Africa. This data may be made publicly available. 
+  terms_of_use_message: `Hello and thanks for reaching out! I am iBIT, which stands for Identifying Barriers to Investment Tool. I collect data on policy barrier to investment in South Africa with the aim of improving the overall business environemnt. 
 
   Before we proceed, I will need you to accept the terms of use. They are available at 
   https://policyinnovationlab.sun.ac.za/wp-content/uploads/2025/10/terms_of_use.pdf 
