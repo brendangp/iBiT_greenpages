@@ -3,7 +3,7 @@ module.exports = {
   terms_of_use_message: `Hello and thanks for WhatsApping me! I am iBIT, a chatbot for business owners and investors to collect data on the policy and regulatory barriers to investing in South Africa. This data may be made publicly available. 
 
   Before we proceed, I will need you to accept the terms of use. They are available at 
-  https://policyinnovationlab.sun.ac.za/ 
+  https://policyinnovationlab.sun.ac.za/wp-content/uploads/2025/10/terms_of_use.pdf 
   More information about the chatbot and how we use your data is available at
   https://policyinnovationlab.sun.ac.za/tool/citizen-generated-data/
   
