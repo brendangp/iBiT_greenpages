@@ -128,8 +128,23 @@ app.post("/webhook", async (req, res) => {
 
     // Check for voice note
     if (incoming.type === "audio" && incoming.audio?.id) {
-      console.log(`🎵 Voice note received from ${from}: ${incoming.audio.id}`);
-      await handleVoiceNote(incoming.audio.id);
+      const transcriptionText = await handleVoiceNote(incoming.audio.id);
+
+      if (transcriptionText) {
+        incoming.text = { body: transcriptionText }; // inject into message structure
+        incoming.type = "text"; // so your logic sees it as normal text
+      } else {
+        console.warn("⚠️ Transcription failed — skipping text logic");
+
+        // Send polite message back to user
+        await sendText(
+          conversation.conversation_id,
+          from, 
+          "Sorry, I was unable to understand what you were saying just now. Please type it out.",
+          botNumber
+        );
+        return;
+      }
     }
 
     // --- Ensure conversation exists ---
