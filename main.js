@@ -64,7 +64,7 @@ async function logInboundMessage(conversationId, message, botNumber = null, dete
     [conversationId, wamid, fromNumber, toNumber, type, body, detectedLanguage, translatedBody]
   );
 
-  return { wamid, body, detectedLanguage, translatedBody };
+  return { wamid, body };
 }
 
 async function updateMessageStatus(wamid, status) {
@@ -147,8 +147,7 @@ app.post("/webhook", async (req, res) => {
       translatedText = originalText;
     }
 
-    const { wamid, body, language, translatedBody } = await logInboundMessage(conversation.conversation_id, incoming, botNumber, detectedLanguage, translatedText);
-    console.log(`📝 Logged message ${wamid} (lang=${language}), body=${body}, translation=${translatedBody}`);
+    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber, detectedLanguage, translatedText);
     await markMessageAsRead(wamid);
 
     // --- If Quit is typed at any stage, perform the following ---
@@ -182,13 +181,13 @@ app.post("/webhook", async (req, res) => {
     // Decide which message content to use
     let messageForAI;
 
-    if (language === "en" || language === "eng" || language?.startsWith("en")) {
+    if (detectedLanguage === "en" || detectedLanguage === "eng" || detectedLanguage?.startsWith("en")) {
       messageForAI = body;
     } else {
-      messageForAI = translatedBody || body; // fallback to body if translation failed
+      messageForAI = translatedText || body; // fallback to body if translation failed
     }
 
-    console.log(`🗣️ Using message for AI: "${messageForAI}" (lang=${language})`);
+    console.log(`🗣️ Using message for AI: "${messageForAI}" (lang=${detectedLanguage})`);
 
     // --- State machine logic ---
     switch (conversation.state) {
@@ -266,7 +265,7 @@ app.post("/webhook", async (req, res) => {
             [
               JSON.stringify(dataArray),
               JSON.stringify(dataTranslatedArray),
-              language, // the detected language code, e.g., "en" or "fr"
+              detectedLanguage, // the detected language code, e.g., "en" or "fr"
               conversation.conversation_id
             ]
           );
