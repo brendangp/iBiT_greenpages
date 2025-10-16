@@ -124,7 +124,7 @@ app.post("/webhook", async (req, res) => {
     if (!incoming) return;
 
     const from = incoming.from;
-    console.log("📩 Incoming message from:", from);
+    console.log("📩 Incoming message from number:", from);
 
     // Check for voice note
     if (incoming.type === "audio" && incoming.audio?.id) {
