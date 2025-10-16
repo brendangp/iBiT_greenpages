@@ -148,6 +148,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     const { wamid, body, language, translatedBody } = await logInboundMessage(conversation.conversation_id, incoming, botNumber, detectedLanguage, translatedText);
+    console.log(`📝 Logged message ${wamid} (lang=${language}), body=${body}, translation=${translatedBody}`);
     await markMessageAsRead(wamid);
 
     // --- If Quit is typed at any stage, perform the following ---
@@ -259,11 +260,13 @@ app.post("/webhook", async (req, res) => {
             `UPDATE conversations 
             SET data = $1, 
                 data_translated = $2, 
+                language = $3,
                 updated_time = NOW() 
-            WHERE conversation_id = $3`,
+            WHERE conversation_id = $4`,
             [
               JSON.stringify(dataArray),
               JSON.stringify(dataTranslatedArray),
+              language, // the detected language code, e.g., "en" or "fr"
               conversation.conversation_id
             ]
           );
