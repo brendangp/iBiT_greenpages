@@ -3,6 +3,7 @@ const OpenAI = require("openai");
 const prompts = require("./prompts");
 const fs = require("fs");
 const path = require("path");
+const axios = require("axios");
 const { execSync } = require("child_process");
 
 // Initialize OpenAI client
@@ -47,6 +48,42 @@ async function getResponses(messages) {
 }
 
 /**
+ * Fetch the URL for a WhatsApp media file (using media ID)
+ * @param {string} mediaId - The ID of the media from the WhatsApp message
+ * @returns {Promise<string>} - Temporary signed URL to download the media
+ */
+async function getMediaUrl(mediaId) {
+  try {
+    const url = `https://graph.facebook.com/v21.0/${mediaId}`;
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
+    });
+    return response.data.url;
+  } catch (err) {
+    console.error("❌ Failed to get media URL:", err.response?.data || err.message);
+    throw err;
+  }
+}
+
+/**
+ * Download a WhatsApp media file from its signed URL
+ * @param {string} mediaUrl - The URL from getMediaUrl()
+ * @returns {Promise<Buffer>} - Audio data as a Buffer
+ */
+async function downloadMediaFile(mediaUrl) {
+  try {
+    const response = await axios.get(mediaUrl, {
+      responseType: "arraybuffer",
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` }
+    });
+    return Buffer.from(response.data);
+  } catch (err) {
+    console.error("❌ Failed to download media file:", err.message);
+    throw err;
+  }
+}
+
+/**
  * Transcribe a voice note using OpenAI Whisper
  * @param {Buffer|string} fileData - The audio file as a buffer or file path
  * @param {string} [filename] - Optional: filename with extension (e.g., 'voice.ogg')
@@ -58,11 +95,12 @@ async function transcribeVoiceNote(fileData, filename = "voice.ogg") {
     if (Buffer.isBuffer(fileData)) {
       fs.writeFileSync(tempPath, fileData);
     } else {
-      tempPath = fileData; // assume it's already a path
+      tempPath = fileData;
     }
 
-    // Convert to wav for compatibility
     const wavPath = tempPath.replace(/\.\w+$/, ".wav");
+
+    // Convert to WAV
     execSync(`ffmpeg -y -i "${tempPath}" -ar 16000 -ac 1 "${wavPath}"`);
 
     const transcription = await client.audio.transcriptions.create({
@@ -70,19 +108,39 @@ async function transcribeVoiceNote(fileData, filename = "voice.ogg") {
       model: "whisper-1"
     });
 
-    // Clean up temp files
+    // Clean up
     fs.unlinkSync(tempPath);
     fs.unlinkSync(wavPath);
 
     return transcription.text || null;
-
   } catch (err) {
     console.error("❌ Whisper transcription error:", err.message || err);
     return null;
   }
 }
 
+/**
+ * Handle a voice note end-to-end (Meta → download → Whisper)
+ * @param {string} mediaId - WhatsApp media ID for the voice note
+ */
+async function handleVoiceNote(mediaId) {
+  console.log(`🎵 Voice note received: ${mediaId}`);
+  try {
+    const mediaUrl = await getMediaUrl(mediaId);
+    const audioBuffer = await downloadMediaFile(mediaUrl);
+    const transcript = await transcribeVoiceNote(audioBuffer, "voice.ogg");
+    console.log("📝 Transcribed VN:", transcript || "No text detected");
+    return transcript;
+  } catch (err) {
+    console.error("❌ Failed to process voice note:", err.message);
+    return null;
+  }
+}
+
 module.exports = {
   getResponses,
-  transcribeVoiceNote
+  transcribeVoiceNote,
+  getMediaUrl,
+  downloadMediaFile,
+  handleVoiceNote
 };
