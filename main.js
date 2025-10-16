@@ -5,7 +5,7 @@ const { sendText, sendButtons, sendFlow, sendLocationRequest, markMessageAsRead 
 const prompts = require("./prompts");
 const { getResponses } = require("./openai_functions");
 // near other requires
-const { detectAndTranslate } = require("./translate");
+const { detectAndTranslate, translateToSelectedLanguage } = require("./translate");
 
 
 const app = express();
@@ -36,7 +36,7 @@ async function getOrCreateConversation(phoneNumber) {
 }
 
 /* ---------------- Messages ---------------- */
-async function logInboundMessage(conversationId, message, botNumber = null, detectedLanguage = null, translatedBody = null) {
+async function logInboundMessage(conversationId, message, botNumber = null) {
   const wamid = message.id;
   const fromNumber = message.from;
   const toNumber = botNumber || process.env.BOT_PHONE_NUMBER || "unknown";
@@ -59,9 +59,9 @@ async function logInboundMessage(conversationId, message, botNumber = null, dete
 
   await query(
     `INSERT INTO messages
-       (conversation_id, wamid, direction, from_number, to_number, type, body, detected_language, translated_body, created_time)
-     VALUES ($1, $2, 'inbound', $3, $4, $5, $6, $7, $8, NOW())`,
-    [conversationId, wamid, fromNumber, toNumber, type, body, detectedLanguage, translatedBody]
+       (conversation_id, wamid, direction, from_number, to_number, type, body, created_time)
+     VALUES ($1, $2, 'inbound', $3, $4, $5, $6, NOW())`,
+    [conversationId, wamid, fromNumber, toNumber, type, body]
   );
 
   return { wamid, body };
@@ -147,7 +147,7 @@ app.post("/webhook", async (req, res) => {
       translatedText = originalText;
     }
 
-    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber, detectedLanguage, translatedText);
+    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
     await markMessageAsRead(wamid);
 
     // --- If Quit is typed at any stage, perform the following ---
@@ -205,12 +205,16 @@ app.post("/webhook", async (req, res) => {
             );
 
             const resPending = await query(
-              `SELECT data FROM conversations WHERE conversation_id = $1`,
+              `SELECT data, data_translated, language FROM conversations WHERE conversation_id = $1`,
               [conversation.conversation_id]
             );
 
             let pendingData = resPending.rows[0]?.data || [];
+            let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
+            const convLanguage = resPending.rows[0]?.language || 'en';
+
             let saveData = [...pendingData]; // copy for saving, does not include system prompt
+            let saveDataTranslated = [...pendingDataTranslated];
 
             // Prepare AI input with system prompt (but do not save this in DB)
             const aiInput = [...pendingData, { role: "system", content: prompts.system_prompt }];
@@ -218,20 +222,28 @@ app.post("/webhook", async (req, res) => {
             const aiResponse = await getResponses(aiInput);
 
             if (aiResponse) {
-              const messageText = aiResponse.text;
+              let messageText = aiResponse.text;
+
+              // Translate if conversation.language is not English
+              if (convLanguage && convLanguage !== 'en') {
+                const translated = await translateToSelectedLanguage(messageText, convLanguage);
+                messageText = translated;
+              }
 
               console.log("🤖 AI Response:", messageText);
               await sendText(conversation.conversation_id, from, messageText, botNumber);
 
               // Append AI response to data array
-              saveData.push({ role: "assistant", content: messageText });
+              saveData.push({ role: "assistant", content: aiResponse.text });
+              saveDataTranslated.push({ role: "assistant", content: messageText });
 
               // Update conversation in database
               await query(
-                `UPDATE conversations SET data = $1, updated_time = NOW() WHERE conversation_id = $2`,
-                [JSON.stringify(saveData), conversation.conversation_id]
+                `UPDATE conversations 
+                SET data = $1, data_translated = $2, updated_time = NOW() 
+                WHERE conversation_id = $3`,
+                [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), conversation.conversation_id]
               );
-              
             }
 
             return;

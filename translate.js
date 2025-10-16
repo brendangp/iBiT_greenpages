@@ -66,4 +66,34 @@ async function detectAndTranslate(text, target = 'en') {
   }
 }
 
-module.exports = { detectAndTranslate };
+/**
+ * Translate English text to the selected language
+ * @param {string} text - English text
+ * @param {string} targetLang - Language code to translate to, e.g., 'fr', 'es'
+ * @returns {Promise<string>} - Translated text
+ */
+async function translateToSelectedLanguage(text, targetLang) {
+  if (!text || !targetLang || targetLang === 'en') return text;
+
+  const parent = `projects/${projectId}/locations/${location}`;
+
+  try {
+    const translateRequest = {
+      parent,
+      contents: [text],
+      mimeType: 'text/plain',
+      targetLanguageCode: targetLang,
+      sourceLanguageCode: 'en',
+    };
+
+    const [translateResponse] = await client.translateText(translateRequest);
+    const translated = (translateResponse.translations && translateResponse.translations[0]?.translatedText) || text;
+
+    return translated;
+  } catch (err) {
+    console.error('Translation to selected language error:', err.message || err);
+    return text; // fallback
+  }
+}
+
+module.exports = { detectAndTranslate, translateToSelectedLanguage };
