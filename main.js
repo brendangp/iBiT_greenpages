@@ -300,17 +300,23 @@ app.post("/webhook", async (req, res) => {
 
         // console.log(`🟢 [unstructured] conversation ${conversation.conversation_id}`);
 
-        const messageContent = incoming.text?.body || "[Non-text message]";
+        // const messageContent = incoming.text?.body || "[Non-text message]";
+
         const resPending = await query(
-          `SELECT data FROM conversations WHERE conversation_id = $1`,
+          `SELECT data, data_translated, language FROM conversations WHERE conversation_id = $1`,
           [conversation.conversation_id]
         );
 
         let pendingData = resPending.rows[0]?.data || [];
+        let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
+        const convLanguage = resPending.rows[0]?.language || 'en';
+
         let saveData = [...pendingData]; // copy of conversation history
+        let saveDataTranslated = [...pendingDataTranslated];
 
         // Add the new user message to both saveData and AI input
-        saveData.push({ role: "user", content: messageContent });
+        saveData.push({ role: "user", content: translatedText });
+        saveDataTranslated.push({ role: "user", content: originalText });
 
         // Count user messages
         const userMessageCount = pendingData.filter(msg => msg.role === "user").length;
@@ -331,9 +337,9 @@ app.post("/webhook", async (req, res) => {
           // Save conversation state + message limit
           await query(
             `UPDATE conversations 
-            SET data = $1, updated_time = NOW(), state = 'structured', message_limit = $2 
-            WHERE conversation_id = $3`,
-            [JSON.stringify(saveData), userMessageCount + 1, conversation.conversation_id]
+            SET data = $1, data_translated = $2, updated_time = NOW(), state = 'structured', message_limit = $3 
+            WHERE conversation_id = $4`,
+            [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), userMessageCount + 1, conversation.conversation_id]
           );
 
           break; // ⛔ stop further AI processing
@@ -342,7 +348,7 @@ app.post("/webhook", async (req, res) => {
         // Prepare AI input: all history + system prompt
         const aiInput = [
           ...pendingData,
-          { role: "user", content: `± ${messageContent} ±` },  // wrapped only for AI
+          { role: "user", content: `± ${translatedText} ±` },  // wrapped only for AI
           { role: "system", content: prompts.system_prompt }
         ];
 
@@ -350,20 +356,29 @@ app.post("/webhook", async (req, res) => {
 
         if (aiResponse) {
           const responseType = aiResponse.type || "-";
-          const messageText = aiResponse.text || aiResponse; // fallback
+          let messageText = aiResponse.text || aiResponse; // fallback
 
           if (responseType === "-") {
+
+            // Translate if conversation language is not English
+            if (convLanguage && convLanguage !== 'en') {
+              const translated = await translateToSelectedLanguage(messageText, convLanguage);
+              messageText = translated;
+            }
+
             // 🔹 Standard text response
             console.log("🤖 AI Response:", messageText);
             await sendText(conversation.conversation_id, from, messageText, botNumber);
 
             // Save to history
-            saveData.push({ role: "assistant", content: messageText });
+            saveData.push({ role: "assistant", content: aiResponse.text });
+            saveDataTranslated.push({ role: "assistant", content: messageText });
+
             await query(
               `UPDATE conversations 
-              SET data = $1, updated_time = NOW(), message_limit = $2 
-              WHERE conversation_id = $3`,
-              [JSON.stringify(saveData), userMessageCount + 1, conversation.conversation_id]
+              SET data = $1, data_translated = $2, updated_time = NOW(), message_limit = $3 
+              WHERE conversation_id = $4`,
+              [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), userMessageCount + 1, conversation.conversation_id]
             );
 
           } else if (responseType === "location_request") {
@@ -381,11 +396,13 @@ app.post("/webhook", async (req, res) => {
 
             // Save special marker in history
             saveData.push({ role: "assistant", content: "[Location Flow Sent]" });
+            saveDataTranslated.push({ role: "assistant", content: "[Location Flow Sent]" });
+
             await query(
               `UPDATE conversations 
-              SET data = $1, updated_time = NOW(), state = 'structured', message_limit = $2 
-              WHERE conversation_id = $3`,
-              [JSON.stringify(saveData), userMessageCount + 1, conversation.conversation_id]
+              SET data = $1, data_translated = $2, updated_time = NOW(), state = 'structured', message_limit = $3 
+              WHERE conversation_id = $4`,
+              [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), userMessageCount + 1, conversation.conversation_id]
             );
           } else {
             console.warn("⚠️ Unknown AI response type:", responseType);
