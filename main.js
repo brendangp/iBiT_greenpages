@@ -198,6 +198,21 @@ app.post("/webhook", async (req, res) => {
       );
       return;
     }
+    if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
+      const nfm = incoming.interactive.nfm_reply;
+
+      // Print the full payload
+      console.log("📦 Form payload received:", JSON.stringify(nfm, null, 2));
+
+      // If needed, parse JSON from the response
+      try {
+        const responseData = JSON.parse(nfm.response_json);
+        console.log("📝 Parsed form data:", responseData);
+      } catch (err) {
+        console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
+      }
+      return;
+    }
 
     // Decide which message content to use
     let messageForAI;
