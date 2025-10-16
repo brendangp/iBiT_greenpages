@@ -3,6 +3,7 @@ const OpenAI = require("openai");
 const prompts = require("./prompts");
 const fs = require("fs");
 const path = require("path");
+const { execSync } = require("child_process");
 
 // Initialize OpenAI client
 const client = new OpenAI({
@@ -53,24 +54,25 @@ async function getResponses(messages) {
  */
 async function transcribeVoiceNote(fileData, filename = "voice.ogg") {
   try {
-    // If it's a buffer, write it temporarily
-    let tempPath = null;
+    let tempPath = path.join(__dirname, filename);
     if (Buffer.isBuffer(fileData)) {
-      tempPath = path.join(__dirname, filename);
       fs.writeFileSync(tempPath, fileData);
     } else {
-      tempPath = fileData; // assume it's a path
+      tempPath = fileData; // assume it's already a path
     }
 
+    // Convert to wav for compatibility
+    const wavPath = tempPath.replace(/\.\w+$/, ".wav");
+    execSync(`ffmpeg -y -i "${tempPath}" -ar 16000 -ac 1 "${wavPath}"`);
+
     const transcription = await client.audio.transcriptions.create({
-      file: fs.createReadStream(tempPath),
+      file: fs.createReadStream(wavPath),
       model: "whisper-1"
     });
 
-    // Remove temp file if we created one
-    if (Buffer.isBuffer(fileData)) {
-      fs.unlinkSync(tempPath);
-    }
+    // Clean up temp files
+    fs.unlinkSync(tempPath);
+    fs.unlinkSync(wavPath);
 
     return transcription.text || null;
 
