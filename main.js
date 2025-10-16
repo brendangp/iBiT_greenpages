@@ -120,6 +120,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     // --- Handle inbound messages ---
+    console.log(incoming);
     const incoming = value?.messages?.[0];
     if (!incoming) return;
 
