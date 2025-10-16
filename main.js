@@ -3,7 +3,7 @@ require("dotenv").config();
 const { query } = require("./db");
 const { sendText, sendButtons, sendFlow, sendLocationRequest, markMessageAsRead } = require("./messages");
 const prompts = require("./prompts");
-const { getResponses } = require("./openai_functions");
+const { getResponses, transcribeVoiceNote } = require("./openai_functions");
 // near other requires
 const { detectAndTranslate, translateToSelectedLanguage } = require("./translate");
 
@@ -128,11 +128,25 @@ app.post("/webhook", async (req, res) => {
 
     // Check for voice note
     if (incoming.type === "audio") {
-      console.log(`🎵 Voice note received from ${from}:`);
-      console.log("  id:", incoming.audio?.id);
-      console.log("  mime_type:", incoming.audio?.mime_type);
-      console.log("  sha256:", incoming.audio?.sha256);
-      return;
+      console.log(`🎵 Voice note received from ${from}:`, incoming.audio?.id);
+
+      // Suppose you have the file URL from Meta (incoming.audio?.id)
+      // Download it first to a buffer (e.g., using axios)
+      const axios = require("axios");
+      const audioUrl = `https://graph.facebook.com/v17.0/${incoming.audio.id}`;
+      const response = await axios.get(audioUrl, {
+        responseType: "arraybuffer",
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`
+        }
+      });
+      const audioBuffer = Buffer.from(response.data);
+
+      // Transcribe
+      const transcribedText = await transcribeVoiceNote(audioBuffer, "voice.ogg");
+      console.log("📝 Transcribed VN:", transcribedText);
+
+      // You can now store transcribedText in your `messages` table or process as normal message
     }
 
     // --- Ensure conversation exists ---
