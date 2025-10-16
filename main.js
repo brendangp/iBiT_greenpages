@@ -4,6 +4,9 @@ const { query } = require("./db");
 const { sendText, sendButtons, sendFlow, sendLocationRequest, markMessageAsRead } = require("./messages");
 const prompts = require("./prompts");
 const { getResponses } = require("./openai_functions");
+// near other requires
+const { detectAndTranslate } = require("./translate");
+
 
 const app = express();
 app.use(express.json());
@@ -33,7 +36,7 @@ async function getOrCreateConversation(phoneNumber) {
 }
 
 /* ---------------- Messages ---------------- */
-async function logInboundMessage(conversationId, message, botNumber = null) {
+async function logInboundMessage(conversationId, message, botNumber = null, detectedLanguage = null, translatedBody = null) {
   const wamid = message.id;
   const fromNumber = message.from;
   const toNumber = botNumber || process.env.BOT_PHONE_NUMBER || "unknown";
@@ -56,12 +59,12 @@ async function logInboundMessage(conversationId, message, botNumber = null) {
 
   await query(
     `INSERT INTO messages
-       (conversation_id, wamid, direction, from_number, to_number, type, body, created_time)
-     VALUES ($1, $2, 'inbound', $3, $4, $5, $6, NOW())`,
-    [conversationId, wamid, fromNumber, toNumber, type, body]
+       (conversation_id, wamid, direction, from_number, to_number, type, body, detected_language, translated_body, created_time)
+     VALUES ($1, $2, 'inbound', $3, $4, $5, $6, $7, $8, NOW())`,
+    [conversationId, wamid, fromNumber, toNumber, type, body, detectedLanguage, translatedBody]
   );
 
-  return { wamid, body };
+  return { wamid, body, detectedLanguage, translatedBody };
 }
 
 async function updateMessageStatus(wamid, status) {
@@ -128,7 +131,23 @@ app.post("/webhook", async (req, res) => {
 
     // --- Log inbound message ---
     const botNumber = value?.metadata?.display_phone_number;
-    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
+
+    // Handle translation
+    let detectedLanguage = null;
+    let translatedText = null;
+    let originalText = incoming.text?.body || null;
+
+    if (incoming.type === "text" && originalText) {
+      // detect & translate
+      const tr = await detectAndTranslate(originalText, 'en'); // default target en
+      detectedLanguage = tr.originalLanguage || null;
+      translatedText = tr.translatedText || originalText;
+    } else {
+      // non-text messages keep null
+      translatedText = originalText;
+    }
+
+    const { wamid, body, language, translatedBody } = await logInboundMessage(conversation.conversation_id, incoming, botNumber, detectedLanguage, translatedText);
     await markMessageAsRead(wamid);
 
     // --- If Quit is typed at any stage, perform the following ---
@@ -158,6 +177,17 @@ app.post("/webhook", async (req, res) => {
     //   );
     //   return;
     // }
+
+    // Decide which message content to use
+    let messageForAI;
+
+    if (language === "en" || language === "eng" || language?.startsWith("en")) {
+      messageForAI = body;
+    } else {
+      messageForAI = translatedBody || body; // fallback to body if translation failed
+    }
+
+    console.log(`🗣️ Using message for AI: "${messageForAI}" (lang=${language})`);
 
     // --- State machine logic ---
     switch (conversation.state) {
@@ -219,14 +249,23 @@ app.post("/webhook", async (req, res) => {
 
         // Terms not accepted yet: store pending message and send terms
         if (!conversation.terms_accepted) {
-          const messageContent = incoming.text?.body || "[Non-text message]";
-          const dataArray = [{ role: "user", content: messageContent }];
+          const messageEnglish = messageForAI;
+          const messageOriginal = body || "[Non-text message]";
+
+          const dataArray = [{ role: "user", content: messageEnglish }];
+          const dataTranslatedArray = [{ role: "user", content: messageOriginal }];
 
           await query(
             `UPDATE conversations 
-            SET data = $1, updated_time = NOW() 
-            WHERE conversation_id = $2`,
-            [JSON.stringify(dataArray), conversation.conversation_id]
+            SET data = $1, 
+                data_translated = $2, 
+                updated_time = NOW() 
+            WHERE conversation_id = $3`,
+            [
+              JSON.stringify(dataArray),
+              JSON.stringify(dataTranslatedArray),
+              conversation.conversation_id
+            ]
           );
 
           await sendButtons(
