@@ -5,7 +5,20 @@
             "id": "business_info",
             "terminal": true,
             "title": "Business Information",
-            "data": {},
+            "data": {
+                "first_municipality": {
+                    "type": "string",
+                    "__example__": "Cape Town"
+                },
+                "second_municipality": {
+                    "type": "string",
+                    "__example__": "Cape Town"
+                },
+                "third_municipality": {
+                    "type": "string",
+                    "__example__": "Cape Town"
+                }
+            },
             "layout": {
                 "type": "SingleColumnLayout",
                 "children": [
@@ -899,6 +912,1478 @@
 
                             },
                             {
+                                "type": "If",
+                                "condition": "${form.business_headquarters} == 'South Africa'",
+                                "then": [
+                                {
+                                        "type": "Dropdown",
+                                        "name": "province_headquarters",
+                                        "label": "Choose the province",
+                                        "required": true,
+                                        "data-source": [
+                                            {
+                                                "id": "gauteng",
+                                                "title": "Gauteng"
+                                            },
+                                            {
+                                                "id": "eastern_cape",
+                                                "title": "Eastern Cape"
+                                            },
+                                            {
+                                                "id": "free_state",
+                                                "title": "Free State"
+                                            },
+                                            {
+                                                "id": "kwazulu_natal",
+                                                "title": "KwaZulu-Natal"
+                                            },
+                                            {
+                                                "id": "limpopo",
+                                                "title": "Limpopo"
+                                            },
+                                            {
+                                                "id": "mpumalanga",
+                                                "title": "Mpumalanga"
+                                            },
+                                            {
+                                                "id": "northern_cape",
+                                                "title": "Northern Cape"
+                                            },
+                                            {
+                                                "id": "north_west",
+                                                "title": "North West"
+                                            },
+                                            {
+                                                "id": "western_cape",
+                                                "title": "Western Cape"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "else": [
+                                {
+                                    "type": "TextBody",
+                                    "text": "Almost done"
+                                }
+                                ]
+                            },
+                            {
+                                "type": "RadioButtonsGroup",
+                                "name": "location_empediment",
+                                "required": true,
+                                "label": "Where in South Africa are you experiencing this impediment?",
+                                "data-source": [
+                                    {
+                                        "id": "everywhere",
+                                        "title": "Across the country as a whole"
+                                    },
+                                    {
+                                        "id": "provincial",
+                                        "title": "In a specific province"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "If",
+                                "condition": "${form.location_empediment} == 'provincial'",
+                                "then": [
+                                    {
+                                        "type": "Dropdown",
+                                        "name": "province",
+                                        "label": "Choose the province",
+                                        "required": true,
+                                        "data-source": [
+                                            {
+                                                "id": "gauteng",
+                                                "title": "Gauteng"
+                                            },
+                                            {
+                                                "id": "eastern_cape",
+                                                "title": "Eastern Cape"
+                                            },
+                                            {
+                                                "id": "free_state",
+                                                "title": "Free State"
+                                            },
+                                            {
+                                                "id": "kwazulu_natal",
+                                                "title": "KwaZulu-Natal"
+                                            },
+                                            {
+                                                "id": "limpopo",
+                                                "title": "Limpopo"
+                                            },
+                                            {
+                                                "id": "mpumalanga",
+                                                "title": "Mpumalanga"
+                                            },
+                                            {
+                                                "id": "northern_cape",
+                                                "title": "Northern Cape"
+                                            },
+                                            {
+                                                "id": "north_west",
+                                                "title": "North West"
+                                            },
+                                            {
+                                                "id": "western_cape",
+                                                "title": "Western Cape"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "Switch",
+                                        "value": "${form.province}",
+                                        "cases": {
+                                            "gauteng": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_gauteng",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "ekurhuleni",
+                                                            "title": "City of Ekurhuleni Metropolitan"
+                                                        },
+                                                        {
+                                                            "id": "johannesburg",
+                                                            "title": "City of Johannesburg Metropolitan"
+                                                        },
+                                                        {
+                                                            "id": "tshwane",
+                                                            "title": "City of Tshwane Metropolitan"
+                                                        },
+                                                        {
+                                                            "id": "sedibeng",
+                                                            "title": "Sedibeng District"
+                                                        },
+                                                        {
+                                                            "id": "west_rand",
+                                                            "title": "West Rand District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_gauteng}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "eastern_cape": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_eastern_cape",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "buffalo_city",
+                                                            "title": "Buffalo City Metropolitan"
+                                                        },
+                                                        {
+                                                            "id": "nelson_mandela_bay",
+                                                            "title": "Nelson Mandela Bay Metropolitan"
+                                                        },
+                                                        {
+                                                            "id": "alfred_nzo",
+                                                            "title": "Alfred Nzo District"
+                                                        },
+                                                        {
+                                                            "id": "amathole",
+                                                            "title": "Amathole District"
+                                                        },
+                                                        {
+                                                            "id": "chris_hani",
+                                                            "title": "Chris Hani District"
+                                                        },
+                                                        {
+                                                            "id": "joe_gqabi",
+                                                            "title": "Joe Gqabi District"
+                                                        },
+                                                        {
+                                                            "id": "OR_tambo",
+                                                            "title": "OR Tambo District"
+                                                        },
+                                                        {
+                                                            "id": "sarah_baartman",
+                                                            "title": "Sarah Baartman District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_eastern_cape}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "free_state": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_free_state",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "manguang",
+                                                            "title": "Mangaung Metropolitan"
+                                                        },
+                                                        {
+                                                            "id": "fezile_dabi",
+                                                            "title": "Fezile Dabi District"
+                                                        },
+                                                        {
+                                                            "id": "lejweleputswa",
+                                                            "title": "Lejweleputswa District"
+                                                        },
+                                                        {
+                                                            "id": "thabo_mofutsanyana",
+                                                            "title": "Thabo Mofutsanyana District"
+                                                        },
+                                                        {
+                                                            "id": "xhariep",
+                                                            "title": "Xhariep District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_free_state}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "kwazulu_natal": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_kwazulu_natal",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "ethekwini",
+                                                            "title": "eThekwini Metropolitan"
+                                                        },
+                                                        {
+                                                            "id": "amajuba",
+                                                            "title": "Amajuba District"
+                                                        },
+                                                        {
+                                                            "id": "harry_gwala",
+                                                            "title": "Harry Gwala District"
+                                                        },
+                                                        {
+                                                            "id": "iLembe",
+                                                            "title": "iLembe District"
+                                                        },
+                                                        {
+                                                            "id": "king_cetshwayo",
+                                                            "title": "King Cetshwayo District"
+                                                        },
+                                                        {
+                                                            "id": "ugu",
+                                                            "title": "Ugu District"
+                                                        },
+                                                        {
+                                                            "id": "uMgungundlovu",
+                                                            "title": "uMgungundlovu District"
+                                                        },
+                                                        {
+                                                            "id": "uMkhanyakude",
+                                                            "title": "uMkhanyakude District"
+                                                        },
+                                                        {
+                                                            "id": "uMzinyathi",
+                                                            "title": "uMzinyathi District"
+                                                        },
+                                                        {
+                                                            "id": "uThukela",
+                                                            "title": "uThukela District"
+                                                        },
+                                                        {
+                                                            "id": "Zululand",
+                                                            "title": "Zululand District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_kwazulu_natal}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "limpopo": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_limpopo",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "capricorn",
+                                                            "title": "Capricorn District"
+                                                        },
+                                                        {
+                                                            "id": "mopani",
+                                                            "title": "Mopani District"
+                                                        },
+                                                        {
+                                                            "id": "sekhukhune",
+                                                            "title": "Sekhukhune District"
+                                                        },
+                                                        {
+                                                            "id": "vhembe",
+                                                            "title": "Vhembe District"
+                                                        },
+                                                        {
+                                                            "id": "waterberg",
+                                                            "title": "Waterberg District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_limpopo}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "mpumalanga": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_mphumalanga",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "ehlanzeni",
+                                                            "title": "Ehlazenini District"
+                                                        },
+                                                        {
+                                                            "id": "gert_sibande",
+                                                            "title": "Gert Sibande District"
+                                                        },
+                                                        {
+                                                            "id": "nkangala",
+                                                            "title": "Nkangala District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_mphumalanga}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "northern_cape": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_northern_cape",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "frances_baard",
+                                                            "title": "Frances Baard District"
+                                                        },
+                                                        {
+                                                            "id": "john_taolo_gaetsewe",
+                                                            "title": "John Taolo Gaetsewe District"
+                                                        },
+                                                        {
+                                                            "id": "namakwa",
+                                                            "title": "Namakwa District"
+                                                        },
+                                                        {
+                                                            "id": "pixley_ka_seme",
+                                                            "title": "Pixley ka Seme District"
+                                                        },
+                                                        {
+                                                            "id": "zf_mgcawu",
+                                                            "title": "ZF Mgcawu District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_northern_cape}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "north_west": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_north_west",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "bojanala_platinum",
+                                                            "title": "Bojanala Platinum District"
+                                                        },
+                                                        {
+                                                            "id": "dr_k_k_kaunda",
+                                                            "title": "Dr Kenneth Kaunda District"
+                                                        },
+                                                        {
+                                                            "id": "ngaka_modiri_molema",
+                                                            "title": "Ngaka Modiri Molema District"
+                                                        },
+                                                        {
+                                                            "id": "ruth_segomotsi",
+                                                            "title": "Dr Ruth Segomotsi Mompati District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_north_west}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "western_cape": [
+                                                {
+                                                    "type": "Dropdown",
+                                                    "name": "municipality_western_cape",
+                                                    "label": "Choose the municipality",
+                                                    "required": true,
+                                                    "data-source": [
+                                                        {
+                                                            "id": "city_of_cape_town",
+                                                            "title": "City of Cape Town Metropolitan"
+                                                        },
+                                                        {
+                                                            "id": "cape_winelands",
+                                                            "title": "Cape Winelands District"
+                                                        },
+                                                        {
+                                                            "id": "central_karoo",
+                                                            "title": "Central Karoo District"
+                                                        },
+                                                        {
+                                                            "id": "garden_route",
+                                                            "title": "Garden Route District"
+                                                        },
+                                                        {
+                                                            "id": "overberg",
+                                                            "title": "Overberg District"
+                                                        },
+                                                        {
+                                                            "id": "west_coast",
+                                                            "title": "West Coast District"
+                                                        },
+                                                        {
+                                                            "id": "not_sure",
+                                                            "title": "Not Sure"
+                                                        }
+                                                    ],
+                                                    "on-select-action": {
+                                                        "name": "update_data",
+                                                        "payload": {
+                                                            "first_municipality": "${form.municipality_western_cape}"
+                                                        }
+                                                    }
+                                                }
+                                            ],
+                                            "default": [
+                                                {
+                                                "type": "TextBody",
+                                                "text": "Almost there"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "RadioButtonsGroup",
+                                        "name": "second_location",
+                                        "required": true,
+                                        "label": "Would you like to add another location?",
+                                        "data-source": [
+                                            {
+                                                "id": "yes",
+                                                "title": "Yes"
+                                            },
+                                            {
+                                                "id": "no",
+                                                "title": "No"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "If",
+                                        "condition": "${form.second_location} == 'yes'",
+                                        "then": [
+                                            {
+                                                "type": "Dropdown",
+                                                "name": "province_second",
+                                                "label": "Choose the province",
+                                                "required": true,
+                                                "data-source": [
+                                                    {
+                                                        "id": "gauteng",
+                                                        "title": "Gauteng"
+                                                    },
+                                                    {
+                                                        "id": "eastern_cape",
+                                                        "title": "Eastern Cape"
+                                                    },
+                                                    {
+                                                        "id": "free_state",
+                                                        "title": "Free State"
+                                                    },
+                                                    {
+                                                        "id": "kwazulu_natal",
+                                                        "title": "KwaZulu-Natal"
+                                                    },
+                                                    {
+                                                        "id": "limpopo",
+                                                        "title": "Limpopo"
+                                                    },
+                                                    {
+                                                        "id": "mpumalanga",
+                                                        "title": "Mpumalanga"
+                                                    },
+                                                    {
+                                                        "id": "northern_cape",
+                                                        "title": "Northern Cape"
+                                                    },
+                                                    {
+                                                        "id": "north_west",
+                                                        "title": "North West"
+                                                    },
+                                                    {
+                                                        "id": "western_cape",
+                                                        "title": "Western Cape"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "Switch",
+                                                "value": "${form.province_second}",
+                                                "cases": {
+                                                    "gauteng": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_gauteng_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "ekurhuleni",
+                                                                    "title": "City of Ekurhuleni Metropolitan"
+                                                                },
+                                                                {
+                                                                    "id": "johannesburg",
+                                                                    "title": "City of Johannesburg Metropolitan"
+                                                                },
+                                                                {
+                                                                    "id": "tshwane",
+                                                                    "title": "City of Tshwane Metropolitan"
+                                                                },
+                                                                {
+                                                                    "id": "sedibeng",
+                                                                    "title": "Sedibeng District"
+                                                                },
+                                                                {
+                                                                    "id": "west_rand",
+                                                                    "title": "West Rand District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_gauteng_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "eastern_cape": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_eastern_cape_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "buffalo_city",
+                                                                    "title": "Buffalo City Metropolitan"
+                                                                },
+                                                                {
+                                                                    "id": "nelson_mandela_bay",
+                                                                    "title": "Nelson Mandela Bay Metropolitan"
+                                                                },
+                                                                {
+                                                                    "id": "alfred_nzo",
+                                                                    "title": "Alfred Nzo District"
+                                                                },
+                                                                {
+                                                                    "id": "amathole",
+                                                                    "title": "Amathole District"
+                                                                },
+                                                                {
+                                                                    "id": "chris_hani",
+                                                                    "title": "Chris Hani District"
+                                                                },
+                                                                {
+                                                                    "id": "joe_gqabi",
+                                                                    "title": "Joe Gqabi District"
+                                                                },
+                                                                {
+                                                                    "id": "OR_tambo",
+                                                                    "title": "OR Tambo District"
+                                                                },
+                                                                {
+                                                                    "id": "sarah_baartman",
+                                                                    "title": "Sarah Baartman District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_eastern_cape_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "free_state": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_free_state_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "manguang",
+                                                                    "title": "Mangaung Metropolitan"
+                                                                },
+                                                                {
+                                                                    "id": "fezile_dabi",
+                                                                    "title": "Fezile Dabi District"
+                                                                },
+                                                                {
+                                                                    "id": "lejweleputswa",
+                                                                    "title": "Lejweleputswa District"
+                                                                },
+                                                                {
+                                                                    "id": "thabo_mofutsanyana",
+                                                                    "title": "Thabo Mofutsanyana District"
+                                                                },
+                                                                {
+                                                                    "id": "xhariep",
+                                                                    "title": "Xhariep District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_free_state_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "kwazulu_natal": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_kwazulu_natal_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "ethekwini",
+                                                                    "title": "eThekwini Metropolitan"
+                                                                },
+                                                                {
+                                                                    "id": "amajuba",
+                                                                    "title": "Amajuba District"
+                                                                },
+                                                                {
+                                                                    "id": "harry_gwala",
+                                                                    "title": "Harry Gwala District"
+                                                                },
+                                                                {
+                                                                    "id": "iLembe",
+                                                                    "title": "iLembe District"
+                                                                },
+                                                                {
+                                                                    "id": "king_cetshwayo",
+                                                                    "title": "King Cetshwayo District"
+                                                                },
+                                                                {
+                                                                    "id": "ugu",
+                                                                    "title": "Ugu District"
+                                                                },
+                                                                {
+                                                                    "id": "uMgungundlovu",
+                                                                    "title": "uMgungundlovu District"
+                                                                },
+                                                                {
+                                                                    "id": "uMkhanyakude",
+                                                                    "title": "uMkhanyakude District"
+                                                                },
+                                                                {
+                                                                    "id": "uMzinyathi",
+                                                                    "title": "uMzinyathi District"
+                                                                },
+                                                                {
+                                                                    "id": "uThukela",
+                                                                    "title": "uThukela District"
+                                                                },
+                                                                {
+                                                                    "id": "Zululand",
+                                                                    "title": "Zululand District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_kwazulu_natal_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "limpopo": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_limpopo_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "capricorn",
+                                                                    "title": "Capricorn District"
+                                                                },
+                                                                {
+                                                                    "id": "mopani",
+                                                                    "title": "Mopani District"
+                                                                },
+                                                                {
+                                                                    "id": "sekhukhune",
+                                                                    "title": "Sekhukhune District"
+                                                                },
+                                                                {
+                                                                    "id": "vhembe",
+                                                                    "title": "Vhembe District"
+                                                                },
+                                                                {
+                                                                    "id": "waterberg",
+                                                                    "title": "Waterberg District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_limpopo_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "mpumalanga": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_mphumalanga_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "ehlanzeni",
+                                                                    "title": "Ehlazenini District"
+                                                                },
+                                                                {
+                                                                    "id": "gert_sibande",
+                                                                    "title": "Gert Sibande District"
+                                                                },
+                                                                {
+                                                                    "id": "nkangala",
+                                                                    "title": "Nkangala District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_mphumalanga_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "northern_cape": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_northern_cape_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "frances_baard",
+                                                                    "title": "Frances Baard District"
+                                                                },
+                                                                {
+                                                                    "id": "john_taolo_gaetsewe",
+                                                                    "title": "John Taolo Gaetsewe District"
+                                                                },
+                                                                {
+                                                                    "id": "namakwa",
+                                                                    "title": "Namakwa District"
+                                                                },
+                                                                {
+                                                                    "id": "pixley_ka_seme",
+                                                                    "title": "Pixley ka Seme District"
+                                                                },
+                                                                {
+                                                                    "id": "zf_mgcawu",
+                                                                    "title": "ZF Mgcawu District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_northern_cape_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "north_west": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_north_west_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "bojanala_platinum",
+                                                                    "title": "Bojanala Platinum District"
+                                                                },
+                                                                {
+                                                                    "id": "dr_k_k_kaunda",
+                                                                    "title": "Dr Kenneth Kaunda District"
+                                                                },
+                                                                {
+                                                                    "id": "ngaka_modiri_molema",
+                                                                    "title": "Ngaka Modiri Molema District"
+                                                                },
+                                                                {
+                                                                    "id": "ruth_segomotsi",
+                                                                    "title": "Dr Ruth Segomotsi Mompati District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_north_west_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "western_cape": [
+                                                        {
+                                                            "type": "Dropdown",
+                                                            "name": "municipality_western_cape_second",
+                                                            "label": "Choose the municipality",
+                                                            "required": true,
+                                                            "data-source": [
+                                                                {
+                                                                    "id": "city_of_cape_town",
+                                                                    "title": "City of Cape Town Metropolitan"
+                                                                },
+                                                                {
+                                                                    "id": "cape_winelands",
+                                                                    "title": "Cape Winelands District"
+                                                                },
+                                                                {
+                                                                    "id": "central_karoo",
+                                                                    "title": "Central Karoo District"
+                                                                },
+                                                                {
+                                                                    "id": "garden_route",
+                                                                    "title": "Garden Route District"
+                                                                },
+                                                                {
+                                                                    "id": "overberg",
+                                                                    "title": "Overberg District"
+                                                                },
+                                                                {
+                                                                    "id": "west_coast",
+                                                                    "title": "West Coast District"
+                                                                },
+                                                                {
+                                                                    "id": "not_sure",
+                                                                    "title": "Not Sure"
+                                                                }
+                                                            ],
+                                                            "on-select-action": {
+                                                                "name": "update_data",
+                                                                "payload": {
+                                                                    "second_municipality": "${form.municipality_western_cape_second}"
+                                                                }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "default": [
+                                                        {
+                                                        "type": "TextBody",
+                                                        "text": "Almost there again"
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "type": "RadioButtonsGroup",
+                                                "name": "third_location",
+                                                "required": true,
+                                                "label": "Would you like to add another location?",
+                                                "data-source": [
+                                                    {
+                                                        "id": "yes",
+                                                        "title": "Yes"
+                                                    },
+                                                    {
+                                                        "id": "no",
+                                                        "title": "No"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "If",
+                                                "condition": "${form.third_location} == 'yes'",
+                                                "then": [
+                                                    {
+                                                        "type": "Dropdown",
+                                                        "name": "province_third",
+                                                        "label": "Choose the province",
+                                                        "required": true,
+                                                        "data-source": [
+                                                            {
+                                                                "id": "gauteng",
+                                                                "title": "Gauteng"
+                                                            },
+                                                            {
+                                                                "id": "eastern_cape",
+                                                                "title": "Eastern Cape"
+                                                            },
+                                                            {
+                                                                "id": "free_state",
+                                                                "title": "Free State"
+                                                            },
+                                                            {
+                                                                "id": "kwazulu_natal",
+                                                                "title": "KwaZulu-Natal"
+                                                            },
+                                                            {
+                                                                "id": "limpopo",
+                                                                "title": "Limpopo"
+                                                            },
+                                                            {
+                                                                "id": "mpumalanga",
+                                                                "title": "Mpumalanga"
+                                                            },
+                                                            {
+                                                                "id": "northern_cape",
+                                                                "title": "Northern Cape"
+                                                            },
+                                                            {
+                                                                "id": "north_west",
+                                                                "title": "North West"
+                                                            },
+                                                            {
+                                                                "id": "western_cape",
+                                                                "title": "Western Cape"
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "Switch",
+                                                        "value": "${form.province_third}",
+                                                        "cases": {
+                                                            "gauteng": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_gauteng_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "ekurhuleni",
+                                                                            "title": "City of Ekurhuleni Metropolitan"
+                                                                        },
+                                                                        {
+                                                                            "id": "johannesburg",
+                                                                            "title": "City of Johannesburg Metropolitan"
+                                                                        },
+                                                                        {
+                                                                            "id": "tshwane",
+                                                                            "title": "City of Tshwane Metropolitan"
+                                                                        },
+                                                                        {
+                                                                            "id": "sedibeng",
+                                                                            "title": "Sedibeng District"
+                                                                        },
+                                                                        {
+                                                                            "id": "west_rand",
+                                                                            "title": "West Rand District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_gauteng_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "eastern_cape": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_eastern_cape_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "buffalo_city",
+                                                                            "title": "Buffalo City Metropolitan"
+                                                                        },
+                                                                        {
+                                                                            "id": "nelson_mandela_bay",
+                                                                            "title": "Nelson Mandela Bay Metropolitan"
+                                                                        },
+                                                                        {
+                                                                            "id": "alfred_nzo",
+                                                                            "title": "Alfred Nzo District"
+                                                                        },
+                                                                        {
+                                                                            "id": "amathole",
+                                                                            "title": "Amathole District"
+                                                                        },
+                                                                        {
+                                                                            "id": "chris_hani",
+                                                                            "title": "Chris Hani District"
+                                                                        },
+                                                                        {
+                                                                            "id": "joe_gqabi",
+                                                                            "title": "Joe Gqabi District"
+                                                                        },
+                                                                        {
+                                                                            "id": "OR_tambo",
+                                                                            "title": "OR Tambo District"
+                                                                        },
+                                                                        {
+                                                                            "id": "sarah_baartman",
+                                                                            "title": "Sarah Baartman District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_eastern_cape_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "free_state": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_free_state_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "manguang",
+                                                                            "title": "Mangaung Metropolitan"
+                                                                        },
+                                                                        {
+                                                                            "id": "fezile_dabi",
+                                                                            "title": "Fezile Dabi District"
+                                                                        },
+                                                                        {
+                                                                            "id": "lejweleputswa",
+                                                                            "title": "Lejweleputswa District"
+                                                                        },
+                                                                        {
+                                                                            "id": "thabo_mofutsanyana",
+                                                                            "title": "Thabo Mofutsanyana District"
+                                                                        },
+                                                                        {
+                                                                            "id": "xhariep",
+                                                                            "title": "Xhariep District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_free_state_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "kwazulu_natal": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_kwazulu_natal_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "ethekwini",
+                                                                            "title": "eThekwini Metropolitan"
+                                                                        },
+                                                                        {
+                                                                            "id": "amajuba",
+                                                                            "title": "Amajuba District"
+                                                                        },
+                                                                        {
+                                                                            "id": "harry_gwala",
+                                                                            "title": "Harry Gwala District"
+                                                                        },
+                                                                        {
+                                                                            "id": "iLembe",
+                                                                            "title": "iLembe District"
+                                                                        },
+                                                                        {
+                                                                            "id": "king_cetshwayo",
+                                                                            "title": "King Cetshwayo District"
+                                                                        },
+                                                                        {
+                                                                            "id": "ugu",
+                                                                            "title": "Ugu District"
+                                                                        },
+                                                                        {
+                                                                            "id": "uMgungundlovu",
+                                                                            "title": "uMgungundlovu District"
+                                                                        },
+                                                                        {
+                                                                            "id": "uMkhanyakude",
+                                                                            "title": "uMkhanyakude District"
+                                                                        },
+                                                                        {
+                                                                            "id": "uMzinyathi",
+                                                                            "title": "uMzinyathi District"
+                                                                        },
+                                                                        {
+                                                                            "id": "uThukela",
+                                                                            "title": "uThukela District"
+                                                                        },
+                                                                        {
+                                                                            "id": "Zululand",
+                                                                            "title": "Zululand District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_kwazulu_natal_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "limpopo": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_limpopo_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "capricorn",
+                                                                            "title": "Capricorn District"
+                                                                        },
+                                                                        {
+                                                                            "id": "mopani",
+                                                                            "title": "Mopani District"
+                                                                        },
+                                                                        {
+                                                                            "id": "sekhukhune",
+                                                                            "title": "Sekhukhune District"
+                                                                        },
+                                                                        {
+                                                                            "id": "vhembe",
+                                                                            "title": "Vhembe District"
+                                                                        },
+                                                                        {
+                                                                            "id": "waterberg",
+                                                                            "title": "Waterberg District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_limpopo_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "mpumalanga": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_mphumalanga_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "ehlanzeni",
+                                                                            "title": "Ehlazenini District"
+                                                                        },
+                                                                        {
+                                                                            "id": "gert_sibande",
+                                                                            "title": "Gert Sibande District"
+                                                                        },
+                                                                        {
+                                                                            "id": "nkangala",
+                                                                            "title": "Nkangala District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_mphumalanga_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "northern_cape": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_northern_cape_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "frances_baard",
+                                                                            "title": "Frances Baard District"
+                                                                        },
+                                                                        {
+                                                                            "id": "john_taolo_gaetsewe",
+                                                                            "title": "John Taolo Gaetsewe District"
+                                                                        },
+                                                                        {
+                                                                            "id": "namakwa",
+                                                                            "title": "Namakwa District"
+                                                                        },
+                                                                        {
+                                                                            "id": "pixley_ka_seme",
+                                                                            "title": "Pixley ka Seme District"
+                                                                        },
+                                                                        {
+                                                                            "id": "zf_mgcawu",
+                                                                            "title": "ZF Mgcawu District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_northern_cape_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "north_west": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_north_west_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "bojanala_platinum",
+                                                                            "title": "Bojanala Platinum District"
+                                                                        },
+                                                                        {
+                                                                            "id": "dr_k_k_kaunda",
+                                                                            "title": "Dr Kenneth Kaunda District"
+                                                                        },
+                                                                        {
+                                                                            "id": "ngaka_modiri_molema",
+                                                                            "title": "Ngaka Modiri Molema District"
+                                                                        },
+                                                                        {
+                                                                            "id": "ruth_segomotsi",
+                                                                            "title": "Dr Ruth Segomotsi Mompati District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_north_west_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "western_cape": [
+                                                                {
+                                                                    "type": "Dropdown",
+                                                                    "name": "municipality_western_cape_third",
+                                                                    "label": "Choose the municipality",
+                                                                    "required": true,
+                                                                    "data-source": [
+                                                                        {
+                                                                            "id": "city_of_cape_town",
+                                                                            "title": "City of Cape Town Metropolitan"
+                                                                        },
+                                                                        {
+                                                                            "id": "cape_winelands",
+                                                                            "title": "Cape Winelands District"
+                                                                        },
+                                                                        {
+                                                                            "id": "central_karoo",
+                                                                            "title": "Central Karoo District"
+                                                                        },
+                                                                        {
+                                                                            "id": "garden_route",
+                                                                            "title": "Garden Route District"
+                                                                        },
+                                                                        {
+                                                                            "id": "overberg",
+                                                                            "title": "Overberg District"
+                                                                        },
+                                                                        {
+                                                                            "id": "west_coast",
+                                                                            "title": "West Coast District"
+                                                                        },
+                                                                        {
+                                                                            "id": "not_sure",
+                                                                            "title": "Not Sure"
+                                                                        }
+                                                                    ],
+                                                                    "on-select-action": {
+                                                                        "name": "update_data",
+                                                                        "payload": {
+                                                                            "third_municipality": "${form.municipality_western_cape_third}"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "default": [
+                                                                {
+                                                                "type": "TextBody",
+                                                                "text": "Almost there again again"
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                ],
+                                                "else": [
+                                                    {
+                                                        "type": "TextBody",
+                                                        "text": "Thank you! Almost there third."
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        "else": [
+                                            {
+                                                "type": "TextBody",
+                                                "text": "Thank you! Almost there second."
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "else": [
+                                    {
+                                        "type": "TextBody",
+                                        "text": "Thank you! Almost there."
+                                    }
+                                ]
+                            },
+                            {
                                 "type": "RadioButtonsGroup",
                                 "name": "region",
                                 "required": true,
@@ -931,8 +2416,16 @@
                                         "sector": "${form.sectors}",
                                         "business_size": "${form.business_size}",
                                         "nationality": "${form.nationality}",
-                                        "region": "${form.region}",
-                                        "province": "${form.provincial}"
+                                        "business_hq": "${form.business_headquarters}",
+                                        "business_hq_province": "${form.province_headquarters}",
+                                        "location_empediment": "${form.location_empediment}",
+                                        "first_province": "${form.province}",
+                                        "first_municipality": "${data.first_municipality}",
+                                        "second_province": "${form.province_second}",   
+                                        "second_municipality": "${data.second_municipality}",
+                                        "third_province": "${form.province_third}",
+                                        "third_municipality": "${data.third_municipality}",
+                                        "region": "${form.region}"
                                     }
                                 }
                             }

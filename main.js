@@ -187,17 +187,17 @@ app.post("/webhook", async (req, res) => {
     }
 
     // --- If "form" is typed at any stage, send a Flow ---
-    // if (incoming.type === "text" && body && body.trim().toLowerCase() === "form") {
-    //   await sendFlow(
-    //     conversation.conversation_id,
-    //     from,
-    //     prompts.flow_params.flowId,        // 👈 put your real flow_id in .env
-    //     prompts.flow_params.flowCta,                // button text
-    //     "This is a test round first about",                    // could pull from your DB or user profile
-    //     botNumber
-    //   );
-    //   return;
-    // }
+    if (incoming.type === "text" && body && body.trim().toLowerCase() === "form") {
+      await sendFlow(
+        conversation.conversation_id,
+        from,
+        1211841967129307,        // 👈 put your real flow_id in .env
+        prompts.flow_params.flowCta,                // button text
+        "This is a test round first about",                    // could pull from your DB or user profile
+        botNumber
+      );
+      return;
+    }
 
     // Decide which message content to use
     let messageForAI;
