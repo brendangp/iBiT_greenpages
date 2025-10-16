@@ -120,12 +120,20 @@ app.post("/webhook", async (req, res) => {
     }
 
     // --- Handle inbound messages ---
-    console.log(value);
     const incoming = value?.messages?.[0];
     if (!incoming) return;
 
     const from = incoming.from;
     console.log("📩 Incoming message from:", from);
+
+    // Check for voice note
+    if (incoming.type === "audio") {
+      console.log(`🎵 Voice note received from ${from}:`);
+      console.log("  id:", incoming.audio?.id);
+      console.log("  mime_type:", incoming.audio?.mime_type);
+      console.log("  sha256:", incoming.audio?.sha256);
+      return;
+    }
 
     // --- Ensure conversation exists ---
     const conversation = await getOrCreateConversation(from);
