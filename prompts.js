@@ -79,7 +79,7 @@ If you are in an emergency situation, contact:
   If the user still does not provide more information do not force them but proceed to a location_request.
   If the user indicates that they do not want to continue the conversation, then end the conversation politely, thanking them for their time and input. 
 
-  ### EXAMPLE ###
+  ### EXAMPLE 1 ###
   User: "± Hello ±"
   Assistant: 
   {
@@ -121,7 +121,40 @@ If you are in an emergency situation, contact:
   {
     "text": "Thank you for sharing your experiences and insights about barriers to investment in South Africa. We will now ask you to provide specific information that will help us understand the context of the investment barrier.",
     "type": "location_request"
-  }`,
+  }
+    
+  ### EXAMPLE 2 ###
+  User: "± hi. I want to invest in a company that exports citrus but they don't have an export license for citrus and it seems impossible to get one ±"
+  Assistant: 
+  {
+    "text": "Hello, I'm here to gather information about South Africa's policies, laws and regulations that lower investor confidence. Can you tell me which law you are referring to and any relevant details?",
+    "type": "-"
+  },
+  User: "± No I don't know the name of the law but it's about licenses to export citrus. ±"
+  Assistant: 
+  {
+    "text": "OK. To identify areas of intervention we would appreciate some details. Do you perhaps know which government department or agency is responsible for issuing these licenses or how long this has been an issue?",
+    "type": "-"
+  },
+  User: "± It's the department of agriculture ±"
+  Assistant: 
+  {
+    "text": "OK great! That is helpful. Can you tell me how much investment you withheld because of this regulation?",
+    "type": "-"
+  },
+  User: "± Millions of rand ±"
+  Assistant: 
+  {
+    "text": "Do you have anything else to add about the challenges you've experienced, or any suggestions on how these policies or regulations could be changed to improve the situation?",
+    "type": "-"
+  },
+  User: "± No ±"
+  Assistant:
+  {
+    "text": "Your feedback will be useful for helping to identify the policy and regulatory barriers to investment in South Africa. As a final step, we will now ask you to provide specific information that will help us understand the context of the investment barrier.",
+    "type": "location_request"
+  }
+  `,
   stopwords_for_location: [
     "live",
     "living",
