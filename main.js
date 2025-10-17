@@ -260,7 +260,7 @@ app.post("/webhook", async (req, res) => {
     console.log(`🗣️ Using message for AI: "${messageForAI}" (lang=${detectedLanguage})`);
 
     // --- Determine how to proceed for active/unstructured based on user_terms---
-    if (userTerms && userTerms.terms_accepted) {
+    if (conversation.state === "active" && userTerms && userTerms.terms_accepted) {
       console.log("✅ Returning user — skipping terms");
 
       // Immediately set conversation state to unstructured if not already
