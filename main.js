@@ -221,32 +221,32 @@ app.post("/webhook", async (req, res) => {
     }
 
     // --- If "form" is typed at any stage, send a Flow ---
-    if (incoming.type === "text" && body && body.trim().toLowerCase() === "form") {
-      await sendFlow(
-        conversation.conversation_id,
-        from,
-        1211841967129307,        // 👈 put your real flow_id in .env
-        prompts.flow_params.flowCta,                // button text
-        "This is a test round first about",                    // could pull from your DB or user profile
-        botNumber
-      );
-      return;
-    }
-    if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
-      const nfm = incoming.interactive.nfm_reply;
+    // if (incoming.type === "text" && body && body.trim().toLowerCase() === "form") {
+    //   await sendFlow(
+    //     conversation.conversation_id,
+    //     from,
+    //     1211841967129307,        // 👈 put your real flow_id in .env
+    //     prompts.flow_params.flowCta,                // button text
+    //     "This is a test round first about",                    // could pull from your DB or user profile
+    //     botNumber
+    //   );
+    //   return;
+    // }
+    // if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
+    //   const nfm = incoming.interactive.nfm_reply;
 
-      // Print the full payload
-      console.log("📦 Form payload received:", JSON.stringify(nfm, null, 2));
+    //   // Print the full payload
+    //   console.log("📦 Form payload received:", JSON.stringify(nfm, null, 2));
 
-      // If needed, parse JSON from the response
-      try {
-        const responseData = JSON.parse(nfm.response_json);
-        console.log("📝 Parsed form data:", responseData);
-      } catch (err) {
-        console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
-      }
-      return;
-    }
+    //   // If needed, parse JSON from the response
+    //   try {
+    //     const responseData = JSON.parse(nfm.response_json);
+    //     console.log("📝 Parsed form data:", responseData);
+    //   } catch (err) {
+    //     console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
+    //   }
+    //   return;
+    // }
 
     // Decide which message content to use
     let messageForAI;
@@ -525,100 +525,49 @@ app.post("/webhook", async (req, res) => {
             // Remove flow_token from response
             const { flow_token, ...savedData } = responseData;
 
-            // Save the response in first_message
+            // Save the form response in first_message
             await query(
               `UPDATE conversations 
-              SET first_message = $1, updated_time = NOW()
+              SET first_message = $1, updated_time = NOW(), state = 'finish'
               WHERE conversation_id = $2`,
               [JSON.stringify(savedData), conversation.conversation_id]
             );
 
-            // console.log("📋 Received form response:", savedData);
-
-            // Thank the user
             const botNumber = value?.metadata?.display_phone_number;
 
-            // If region is municipal, ask for location and keep state structured
-            if (savedData.region?.toLowerCase() === "municipal") {
-              await sendLocationRequest(
-                conversation.conversation_id,
-                from,
-                "Please provide us with the location where this is taking place.", // your custom message text
-                botNumber
-              );
+            // Thank the user
+            await sendText(
+              conversation.conversation_id,
+              from,
+              "✅ Thank you for submitting your impediment. You may submit another one at any time if needed.",
+              botNumber
+            );
 
-              // console.log("📍 Waiting for location from user...");
+            // console.log("📋 Form response saved and conversation finished:", savedData);
 
-            } else {
-              // Otherwise, thank the user and finish conversation
-              await sendText(
-                conversation.conversation_id,
-                from,
-                prompts.response_to_location_pin,
-                botNumber
-              );
-
-              await query(
-                `UPDATE conversations 
-                SET state = 'finish', updated_time = NOW() 
-                WHERE conversation_id = $1`,
-                [conversation.conversation_id]
-              );
-            }
           } catch (err) {
             console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
           }
 
-        } else if (incoming.type === "location") {
-          // Log user location
-          // console.log("📍 User sent location:", incoming.location);
+        } else {
+          // Not a valid form response — send fallback message and end
           const botNumber = value?.metadata?.display_phone_number;
-
-          // Fetch existing first_message
-          const res = await query(
-            `SELECT first_message FROM conversations WHERE conversation_id = $1`,
-            [conversation.conversation_id]
-          );
-
-          let firstMessageData = {};
-          try {
-            firstMessageData = res.rows[0]?.first_message
-              ? JSON.parse(res.rows[0].first_message)
-              : {};
-          } catch (err) {
-            console.error("❌ Failed to parse existing first_message JSON:", err.message);
-          }
-
-          // Store the entire location object
-          firstMessageData.location = incoming.location;
-
-          // Mark conversation finished
-          await query(
-            `UPDATE conversations 
-            SET state = 'finish', updated_time = NOW(), first_message = $1 
-            WHERE conversation_id = $2`,
-            [JSON.stringify(firstMessageData), conversation.conversation_id]
-          );
 
           await sendText(
             conversation.conversation_id,
             from,
-            prompts.response_to_location_pin, // your thank-you text
+            "⚠️ Sorry, I didn’t understand your response. The process has been closed. You can start again anytime if you’d like to submit another impediment. Thanks.",
             botNumber
           );
 
-          // Log updated first_message
-          // console.log("📋 Updated first_message with location:", firstMessageData);
-
-        } else {
-          // Not a form response → mark conversation finished
-          console.log("⚠️ Received non-form response in structured state. Finishing conversation.");
           await query(
             `UPDATE conversations 
             SET state = 'finish', updated_time = NOW() 
             WHERE conversation_id = $1`,
             [conversation.conversation_id]
           );
+
+          // console.log("⚠️ Non-form response received — conversation ended.");
         }
         break;
         
