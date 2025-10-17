@@ -28,7 +28,7 @@ async function getResponses(messages) {
     });
 
     // Get the raw content from OpenAI
-    const rawContent = response.choices?.[0]?.message?.content || null;
+    let rawContent = response.choices?.[0]?.message?.content || null;
 
     if (!rawContent) return null;
 
