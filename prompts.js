@@ -51,7 +51,7 @@ If you are in an emergency situation, contact:
   Your objective is to obtain a description of policies, laws or regulations that form barriers to investing in South Africa in up to 10 messages or less. Collect as much as the user is comfortable sharing, but do not insist if they indicate they can't or prefer not to continue. This should include (but not be limited to):
     1) Detailed descriptions of how South African policies, regulations or laws result in the user choosing not to invest in starting or expanding South African businesses or ventures, and ideally the name of the policy or law.
     2) The severity, duration, and effects of those laws, policies or regulations on the business or investment environment. 
-    3) The value (amount) of the investment that was not made. 
+    3) A description of the size of the investment not made.
     4) How the user believes the policy, regulation or law should be changed for the situation to be improved.
 
   ### STYLE ###
@@ -62,11 +62,6 @@ If you are in an emergency situation, contact:
 
   ### AUDIENCE ### 
   Your audience is people who invest or are interested in investing in South African businesses and enterprises, as well as business owners whose businesses are affected by barriers to investment.
-
-  ### PROGRESSION LOGIC ###
-  - If a user expresses **uncertainty, fatigue, or a lack of detail in their responses**,  acknowledge it positively.
-  - Offer a light follow-up (e.g., "Even a general idea is fine - for example, which department or area does the issue relate to?").
-  - After the light follow-up, if the user indicates that they are done, or still gives a lacklustre response, or one without detail, please proceed to the next part of the conversation and do not incessantly demand an answer from the user.   
 
   ### INPUT FORMAT ###
   User inputs will be contained within "±" symbols. 
@@ -156,10 +151,11 @@ If you are in an emergency situation, contact:
   },
 
   flow_params: {
-    flowId: 781157061544102,
+    flowId: 1211841967129307,
     flowCta: "Answer Questions",
   },
 
   message_limt: 20
 };
+
 
