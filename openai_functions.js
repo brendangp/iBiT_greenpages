@@ -34,11 +34,25 @@ async function getResponses(messages) {
 
     // Ensure it is returned as JSON
     try {
-      return typeof rawContent === "string" ? JSON.parse(rawContent) : rawContent;
+      return JSON.parse(rawContent);
     } catch (err) {
-      console.error("❌ Failed to parse AI response as JSON:", err.message);
-      // Optionally wrap it in a default object if parsing fails
-      return { text: rawContent, type: "-" };
+      // 🧹 If parsing fails, clean up code fences and extra text
+      rawContent = rawContent
+        .replace(/```json\s*/gi, "")
+        .replace(/```/g, "")
+        .trim();
+
+      // Extract JSON object from any surrounding text
+      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) rawContent = jsonMatch[0];
+
+      // Try parsing the cleaned content
+      try {
+        return JSON.parse(rawContent);
+      } catch (err) {
+        console.error("❌ Failed to parse AI response as JSON:", err.message);
+        return { text: rawContent, type: "-" };
+      }
     }
 
   } catch (err) {
