@@ -274,15 +274,15 @@ app.post("/webhook", async (req, res) => {
       }
 
       // Save their first message into conversation.data
-      const dataArray = [{ role: "user", content: translatedText }];
-      const dataTranslatedArray = [{ role: "user", content: originalText }];
+      // const dataArray = [{ role: "user", content: translatedText }];
+      // const dataTranslatedArray = [{ role: "user", content: originalText }];
 
-      await query(
-        `UPDATE conversations 
-        SET data = $1, data_translated = $2, language = 'en', updated_time = NOW()
-        WHERE conversation_id = $3`,
-        [JSON.stringify(dataArray), JSON.stringify(dataTranslatedArray), conversation.conversation_id]
-      );
+      // await query(
+      //   `UPDATE conversations 
+      //   SET data = $1, data_translated = $2, language = 'en', updated_time = NOW()
+      //   WHERE conversation_id = $3`,
+      //   [JSON.stringify(dataArray), JSON.stringify(dataTranslatedArray), conversation.conversation_id]
+      // );
 
       // Skip the “active” case entirely and jump to unstructured logic
       conversation.state = "unstructured";
