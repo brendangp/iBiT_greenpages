@@ -92,6 +92,22 @@ async function updateMessageStatus(wamid, status) {
   }
 }
 
+/* ---------------- User Terms ---------------- */
+async function checkUserTerms(phoneNumber) {
+  const res = await query(`SELECT * FROM user_terms WHERE phone_number = $1`, [phoneNumber]);
+  return res.rows[0] || null;
+}
+
+async function saveUserTerms(phoneNumber, accepted) {
+  await query(
+    `INSERT INTO user_terms (phone_number, terms_accepted, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (phone_number)
+     DO UPDATE SET terms_accepted = EXCLUDED.terms_accepted, updated_at = NOW()`,
+    [phoneNumber, accepted]
+  );
+}
+
 
 /* ---------------- Webhook verification ---------------- */
 app.get("/webhook", (req, res) => {
@@ -147,6 +163,8 @@ app.post("/webhook", async (req, res) => {
       }
     }
 
+    // --- Check if user has accepted Terms ---
+    const userTerms = await checkUserTerms(from);
     // --- Ensure conversation exists ---
     const conversation = await getOrCreateConversation(from);
 
@@ -158,6 +176,7 @@ app.post("/webhook", async (req, res) => {
     let translatedText = null;
     let originalText = incoming.text?.body || null;
 
+    // Translate text if necessary
     if (incoming.type === "text" && originalText) {
       // detect & translate
       const tr = await detectAndTranslate(originalText, 'en'); // default target en
@@ -168,6 +187,7 @@ app.post("/webhook", async (req, res) => {
       translatedText = originalText;
     }
 
+    // Save incomming message
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
     await markMessageAsRead(wamid);
 
@@ -225,6 +245,35 @@ app.post("/webhook", async (req, res) => {
 
     console.log(`🗣️ Using message for AI: "${messageForAI}" (lang=${detectedLanguage})`);
 
+    // --- Determine how to proceed for active/unstructured based on user_terms---
+    if (userTerms && userTerms.terms_accepted) {
+      console.log("✅ Returning user — skipping terms");
+
+      // Immediately set conversation state to unstructured if not already
+      if (conversation.state !== "unstructured") {
+        await query(
+          `UPDATE conversations 
+          SET state = 'unstructured', terms_accepted = true, updated_time = NOW() 
+          WHERE conversation_id = $1`,
+          [conversation.conversation_id]
+        );
+      }
+
+      // Save their first message into conversation.data
+      const dataArray = [{ role: "user", content: translatedText }];
+      const dataTranslatedArray = [{ role: "user", content: originalText }];
+
+      await query(
+        `UPDATE conversations 
+        SET data = $1, data_translated = $2, language = 'en', updated_time = NOW()
+        WHERE conversation_id = $3`,
+        [JSON.stringify(dataArray), JSON.stringify(dataTranslatedArray), conversation.conversation_id]
+      );
+
+      // Skip the “active” case entirely and jump to unstructured logic
+      conversation.state = "unstructured";
+    }
+
     // --- State machine logic ---
     switch (conversation.state) {
       case "active":
@@ -239,6 +288,9 @@ app.post("/webhook", async (req, res) => {
                WHERE conversation_id = $1`,
               [conversation.conversation_id]
             );
+
+            // Record acceptance in user_terms
+            await saveUserTerms(from, true);
 
             const resPending = await query(
               `SELECT data, data_translated, language FROM conversations WHERE conversation_id = $1`,
