@@ -15,6 +15,21 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 /* ---------------- Conversations ---------------- */
 async function getOrCreateConversation(phoneNumber) {
+  // 1️⃣ Ensure user_terms entry exists
+  const userTerms = await query(
+    `SELECT id FROM user_terms WHERE phone_number = $1 LIMIT 1`,
+    [phoneNumber]
+  );
+
+  if (userTerms.rows.length === 0) {
+    await query(
+      `INSERT INTO user_terms (phone_number, terms_accepted, created_at)
+       VALUES ($1, false, NOW())`,
+      [phoneNumber]
+    );
+  }
+
+  // 2️⃣ Get or create conversation
   const res = await query(
     `SELECT * FROM conversations 
      WHERE phone_number = $1 
@@ -100,11 +115,10 @@ async function checkUserTerms(phoneNumber) {
 
 async function saveUserTerms(phoneNumber, accepted) {
   await query(
-    `INSERT INTO user_terms (phone_number, terms_accepted, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (phone_number)
-     DO UPDATE SET terms_accepted = EXCLUDED.terms_accepted, updated_at = NOW()`,
-    [phoneNumber, accepted]
+    `UPDATE user_terms 
+     SET terms_accepted = $1, updated_at = NOW() 
+     WHERE phone_number = $2`,
+    [accepted, phoneNumber]
   );
 }
 
