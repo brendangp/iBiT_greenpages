@@ -145,7 +145,7 @@ If you are in an emergency situation, contact:
   model_params: {
     model: "gpt-4o",
     max_tokens: 400,
-    temperature: 0.4,
+    temperature: 0.5,
     n: 1,
     stop: null
   },
