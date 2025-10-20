@@ -265,11 +265,25 @@ app.post("/webhook", async (req, res) => {
 
       // Immediately set conversation state to unstructured if not already
       if (conversation.state !== "unstructured") {
+        // ✅ FIX: Initialize data arrays for returning users
+        const dataArray = [{ role: "user", content: messageForAI }];
+        const dataTranslatedArray = [{ role: "user", content: body }];
+
         await query(
           `UPDATE conversations 
-          SET state = 'unstructured', terms_accepted = true, updated_time = NOW() 
-          WHERE conversation_id = $1`,
-          [conversation.conversation_id]
+          SET state = 'unstructured', 
+              terms_accepted = true, 
+              data = $1, 
+              data_translated = $2, 
+              language = $3, 
+              updated_time = NOW() 
+          WHERE conversation_id = $4`,
+          [
+            JSON.stringify(dataArray), 
+            JSON.stringify(dataTranslatedArray), 
+            detectedLanguage || 'en',
+            conversation.conversation_id
+          ]
         );
       }
 
