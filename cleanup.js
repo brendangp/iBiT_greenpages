@@ -23,7 +23,7 @@ async function cleanup() {
   try {
     // 1️⃣ Process expired user_terms
     const { rows: expiredTerms } = await query(`
-      SELECT * FROM user_terms WHERE expires_at <= NOW()
+      SELECT * FROM user_terms WHERE expired_at <= NOW()
     `);
 
     for (const term of expiredTerms) {
@@ -33,10 +33,6 @@ async function cleanup() {
       `, [term.phone_number]);
 
       for (const conv of conversations) {
-        // Fetch messages (optional if you want to process content)
-        const { rows: messages } = await query(`
-          SELECT * FROM messages WHERE conversation_id = $1
-        `, [conv.conversation_id]);
 
         // Prepare long-term data
         const user_id = hashPhoneNumber(conv.phone_number);
@@ -47,7 +43,7 @@ async function cleanup() {
 
         // Insert into long-term DB
         await longTermQuery(`
-          INSERT INTO long_term_conversations
+          INSERT INTO survey_responses
           (user_id, location, date, conversation, original_conversation)
           VALUES ($1, $2, $3, $4, $5)
         `, [user_id, location, date, conversation, original_conversation]);
@@ -65,7 +61,7 @@ async function cleanup() {
 
     // 2️⃣ Process expired conversations (not already handled)
     const { rows: expiredConvs } = await query(`
-      SELECT * FROM conversations WHERE expires_at <= NOW()
+      SELECT * FROM conversations WHERE expired_at <= NOW()
     `);
 
     for (const conv of expiredConvs) {
@@ -79,7 +75,7 @@ async function cleanup() {
 
       // Insert into long-term DB
       await longTermQuery(`
-        INSERT INTO long_term_conversations
+        INSERT INTO survey_responses
         (user_id, location, date, conversation, original_conversation)
         VALUES ($1, $2, $3, $4, $5)
       `, [user_id, location, date, conversation, original_conversation]);
