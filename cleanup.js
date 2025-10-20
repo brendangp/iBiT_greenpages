@@ -1,5 +1,6 @@
 const { query, longTermQuery } = require('./db');
 const crypto = require('crypto');
+const axios = require('axios');
 
 // --- Helpers ---
 
@@ -20,6 +21,14 @@ function getMonday(date) {
 
 // --- Main Cleanup Function ---
 async function cleanup() {
+
+    // Check cron IP address
+    (async () => {
+        const res = await axios.get('https://api.ipify.org?format=json');
+        console.log(res.data);
+    })();
+
+
   try {
     // 1️⃣ Process expired user_terms
     const { rows: expiredTerms } = await query(`
