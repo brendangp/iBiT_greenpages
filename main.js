@@ -259,6 +259,8 @@ app.post("/webhook", async (req, res) => {
 
     console.log(`🗣️ Using message for AI: "${messageForAI}" (lang=${detectedLanguage})`);
 
+    let isReturningUserFirstMessage = false;
+
     // --- Determine how to proceed for active/unstructured based on user_terms---
     if (conversation.state === "active" && userTerms && userTerms.terms_accepted) {
       console.log("✅ Returning user — skipping terms");
@@ -266,6 +268,8 @@ app.post("/webhook", async (req, res) => {
       // Immediately set conversation state to unstructured if not already
       if (conversation.state !== "unstructured") {
         // ✅ FIX: Initialize data arrays for returning users
+        isReturningUserFirstMessage = true;
+
         const dataArray = [{ role: "user", content: messageForAI }];
         const dataTranslatedArray = [{ role: "user", content: body }];
 
@@ -286,17 +290,6 @@ app.post("/webhook", async (req, res) => {
           ]
         );
       }
-
-      // Save their first message into conversation.data
-      // const dataArray = [{ role: "user", content: translatedText }];
-      // const dataTranslatedArray = [{ role: "user", content: originalText }];
-
-      // await query(
-      //   `UPDATE conversations 
-      //   SET data = $1, data_translated = $2, language = 'en', updated_time = NOW()
-      //   WHERE conversation_id = $3`,
-      //   [JSON.stringify(dataArray), JSON.stringify(dataTranslatedArray), conversation.conversation_id]
-      // );
 
       // Skip the “active” case entirely and jump to unstructured logic
       conversation.state = "unstructured";
@@ -430,9 +423,14 @@ app.post("/webhook", async (req, res) => {
         let saveData = [...pendingData]; // copy of conversation history
         let saveDataTranslated = [...pendingDataTranslated];
 
+        if (!isReturningUserFirstMessage) {
+          saveData.push({ role: "user", content: translatedText });
+          saveDataTranslated.push({ role: "user", content: originalText });
+        }
+
         // Add the new user message to both saveData and AI input
-        saveData.push({ role: "user", content: translatedText });
-        saveDataTranslated.push({ role: "user", content: originalText });
+        // saveData.push({ role: "user", content: translatedText });
+        // saveDataTranslated.push({ role: "user", content: originalText });
 
         // Count user messages
         const userMessageCount = pendingData.filter(msg => msg.role === "user").length;
