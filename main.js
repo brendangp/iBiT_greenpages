@@ -23,8 +23,8 @@ async function getOrCreateConversation(phoneNumber) {
 
   if (userTerms.rows.length === 0) {
     await query(
-      `INSERT INTO user_terms (phone_number, terms_accepted, created_at)
-       VALUES ($1, false, NOW())`,
+      `INSERT INTO user_terms (phone_number, terms_accepted, created_at, expired_at)
+      VALUES ($1, false, NOW(), NOW() + INTERVAL '24 hours')`,
       [phoneNumber]
     );
   }
@@ -211,6 +211,7 @@ app.post("/webhook", async (req, res) => {
         `UPDATE conversations SET first_message = NULL, state = 'finish', updated_time = NOW() WHERE conversation_id = $1`,
         [conversation.conversation_id]
       );
+      // TODO: delete the data of the user
       await sendText(
         conversation.conversation_id,
         from,
@@ -363,6 +364,7 @@ app.post("/webhook", async (req, res) => {
               `UPDATE conversations SET first_message = NULL, state = 'finish', updated_time = NOW() WHERE conversation_id = $1`,
               [conversation.conversation_id]
             );
+            //TODO: delete the data of the user
             await sendText(conversation.conversation_id, from, prompts.quit_response, botNumber);
             return;
           }
@@ -540,7 +542,7 @@ app.post("/webhook", async (req, res) => {
             // Save the form response in first_message
             await query(
               `UPDATE conversations 
-              SET first_message = $1, updated_time = NOW(), state = 'finish'
+              SET first_message = $1, updated_time = NOW(), state = 'finish', expired_at = NOW()
               WHERE conversation_id = $2`,
               [JSON.stringify(savedData), conversation.conversation_id]
             );
@@ -574,7 +576,7 @@ app.post("/webhook", async (req, res) => {
 
           await query(
             `UPDATE conversations 
-            SET state = 'finish', updated_time = NOW() 
+            SET state = 'finish', updated_time = NOW(), expired_at = NOW() 
             WHERE conversation_id = $1`,
             [conversation.conversation_id]
           );
