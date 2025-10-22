@@ -75,9 +75,8 @@ async function cleanup() {
 
     for (const conv of expiredConvs) {
 
-      // Prepare long-term data
       const user_id = hashPhoneNumber(conv.phone_number);
-      const location = conv.first_message;
+      const location = conv.first_message; // transformations can be added here later
       const date = getMonday(conv.started_at);
       const conversation = JSON.stringify(conv.data);
       const original_conversation = JSON.stringify(conv.data_translated);
