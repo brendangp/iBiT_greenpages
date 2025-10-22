@@ -47,8 +47,8 @@ async function cleanup() {
         const user_id = hashPhoneNumber(conv.phone_number);
         const location = conv.first_message; // transformations can be added here later
         const date = getMonday(conv.started_at);
-        const conversation = conv.data;
-        const original_conversation = conv.data_translated;
+        const conversation = JSON.stringify(conv.data); // <--- FIX
+        const original_conversation = JSON.stringify(conv.data_translated); // <--- FIX
 
         // Insert into long-term DB
         await longTermQuery(`
