@@ -7,8 +7,7 @@ const location = process.env.GCP_TRANSLATE_LOCATION || 'global';
 // Common short greetings/phrases that shouldn't trigger language detection
 const SHORT_GREETING_CATCHES = [
   'holla', 'howzit', 'hey', 'hi', 'hello', 'yo', 'sup',
-  'yea', 'yeah', 'ya', 'yes', 'no', 'ok', 'okay', 'cool',
-  'thanks', 'thank', 'thx', 'bye', 'ciao', 'hola', 'ola',
+  'yo', 'ciao', 'hola', 'ola',
   'morning', 'afternoon', 'evening', 'night', 'goodnight',
   'wassup', 'whatsup', 'greetings'
 ];
@@ -77,7 +76,7 @@ async function detectAndTranslate(text, target = 'en', confidenceThreshold = 0.8
     return {
       originalLanguage: 'en',
       confidence: 1.0,
-      translatedText: text,
+      translatedText: "Hello", //Change to english so the LLM does not get confused
       shouldUseEnglish: true
     };
   }
