@@ -126,11 +126,11 @@
                                 "data-source": [
                                     {
                                         "id": "local",
-                                        "title": "Operating in the country."
+                                        "title": "Operating in SA"
                                     },
                                     {
                                         "id": "foreign",
-                                        "title": "Not operating in the country"
+                                        "title": "Not operating in SA"
                                     }
                                 ]
                             },
@@ -1426,7 +1426,7 @@
                                             "default": [
                                                 {
                                                 "type": "TextBody",
-                                                "text": "Almost there"
+                                                "text": "Thank you! We are almost done."
                                                 }
                                             ]
                                         }
@@ -1890,7 +1890,7 @@
                                                     "default": [
                                                         {
                                                         "type": "TextBody",
-                                                        "text": "Almost there again"
+                                                        "text": "Thank you! We are almost done."
                                                         }
                                                     ]
                                                 }
@@ -2354,7 +2354,7 @@
                                                             "default": [
                                                                 {
                                                                 "type": "TextBody",
-                                                                "text": "Almost there again again"
+                                                                "text": "Thank you! We are almost done."
                                                                 }
                                                             ]
                                                         }
@@ -2363,7 +2363,7 @@
                                                 "else": [
                                                     {
                                                         "type": "TextBody",
-                                                        "text": "Thank you! Almost there third."
+                                                        "text": "Thank you! We are almost done."
                                                     }
                                                 ]
                                             }
@@ -2371,7 +2371,7 @@
                                         "else": [
                                             {
                                                 "type": "TextBody",
-                                                "text": "Thank you! Almost there second."
+                                                "text": "Thank you! We are almost done."
                                             }
                                         ]
                                     }
@@ -2379,7 +2379,7 @@
                                 "else": [
                                     {
                                         "type": "TextBody",
-                                        "text": "Thank you! Almost there."
+                                        "text": "Thank you! We are almost done."
                                     }
                                 ]
                             },
@@ -2387,7 +2387,7 @@
                                 "type": "RadioButtonsGroup",
                                 "name": "region",
                                 "required": true,
-                                "label": "Is the policy causing the impediment national, provincial, or municipal?",
+                                "label": "Is the policy/regulation causing the issue national, provincial or municipal?",
                                 "data-source": [
                                     {
                                         "id": "national",

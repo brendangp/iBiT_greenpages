@@ -207,6 +207,14 @@ app.post("/webhook", async (req, res) => {
 
     // --- If Quit is typed at any stage, perform the following ---
     if ( incoming.type === "text" && body && body.trim().toLowerCase() === "quit") {
+      // Have to send text first to stop errors
+      await sendText(
+        conversation.conversation_id,
+        from,
+        prompts.quit_response,
+        botNumber
+      );
+
       // Delete data
       await query(
         `DELETE FROM user_terms WHERE phone_number = $1`,
@@ -223,13 +231,6 @@ app.post("/webhook", async (req, res) => {
         [conversation.conversation_id]
       );
 
-      // TODO: delete the data of the user
-      await sendText(
-        conversation.conversation_id,
-        from,
-        prompts.quit_response,
-        botNumber
-      );
       return;
     }
 
@@ -372,6 +373,9 @@ app.post("/webhook", async (req, res) => {
           }
 
           if (replyId === "quit_terms") {
+            //Have to send text first to stop errors
+            await sendText(conversation.conversation_id, from, prompts.quit_response, botNumber);
+
             // Delete data
             await query(
               `DELETE FROM user_terms WHERE phone_number = $1`,
@@ -387,8 +391,7 @@ app.post("/webhook", async (req, res) => {
               `DELETE FROM conversations WHERE conversation_id = $1`,
               [conversation.conversation_id]
             );
-            //TODO: delete the data of the user
-            await sendText(conversation.conversation_id, from, prompts.quit_response, botNumber);
+            
             return;
           }
         }
