@@ -221,7 +221,7 @@ async function cleanup() {
     for (const term of expiredTerms) {
       // Find associated conversations
       const { rows: conversations } = await query(`
-        SELECT * FROM conversations WHERE phone_number = $1
+        SELECT * FROM conversations WHERE phone_number = $1 AND expired_at IS NOT NULL
       `, [term.phone_number]);
 
       for (const conv of conversations) {
