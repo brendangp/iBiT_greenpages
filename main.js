@@ -342,6 +342,7 @@ app.post("/webhook", async (req, res) => {
             let pendingData = resPending.rows[0]?.data || [];
             let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
             const responseLanguage = shouldUseEnglish ? 'en': resPending.rows[0]?.language || originalLanguage || 'en';
+            console.log("responsLanguage", responseLanguage);
 
             let saveData = [...pendingData]; // copy for saving, does not include system prompt
             let saveDataTranslated = [...pendingDataTranslated];
@@ -353,6 +354,7 @@ app.post("/webhook", async (req, res) => {
 
             if (aiResponse) {
               let messageText = aiResponse.text;
+              console.log("AI Response before translation:", messageText);
 
               // Translate if conversation.language is not English
               if (responseLanguage && responseLanguage !== 'en') {
