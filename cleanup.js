@@ -7,17 +7,17 @@ const nlp = require('compromise');
 
 // One-way SHA256 hash for phone numbers
 function hashPhoneNumber(phone) {
-  return crypto.createHash('sha256').update(phone).digest('hex');
+    return crypto.createHash('sha256').update(phone).digest('hex'); 
 }
 
 // Get nearest previous Monday from a date
 function getMonday(date) {
-  const d = new Date(date);
-  const day = d.getUTCDay(); // Sunday = 0, Monday = 1
-  const diff = (day === 0 ? -6 : 1) - day; // shift Sunday to previous Monday
-  d.setUTCDate(d.getUTCDate() + diff);
-  d.setUTCHours(0, 0, 0, 0);
-  return d;
+    const d = new Date(date);
+    const day = d.getUTCDay(); // Sunday = 0, Monday = 1
+    const diff = (day === 0 ? -6 : 1) - day; // shift Sunday to previous Monday
+    d.setUTCDate(d.getUTCDate() + diff);
+    d.setUTCHours(0, 0, 0, 0);
+    return d;
 }
 
 // Sector lookup mapping
@@ -37,59 +37,79 @@ const sectorMapping = {
 
 // Parse first_message and extract structured data
 function parseFirstMessage(firstMessage) {
-  let data;
-  try {
-    data = typeof firstMessage === 'string' ? JSON.parse(firstMessage) : firstMessage;
-  } catch (err) {
-    console.error('Failed to parse first_message:', err);
-    return { sector: null, size: null, investor_origin: null, location_details: {} };
-  }
 
-  console.log('First message data:', data);
+    if (!firstMessage) {
+        return {
+        sector: null,
+        size: null,
+        investor_origin: null,
+        location_details: {
+                location_company_hq: {
+                country: "",
+                province: ""
+                },
+                location_prl: {
+                province: [],
+                district_municipality: []
+                },
+                sphere: ""
+            }
+        };
+    }
 
-  // Extract sector with title lookup
-  const sector = data.sector ? sectorMapping[data.sector] || null : null;
+    let data;
+    try {
+        data = typeof firstMessage === 'string' ? JSON.parse(firstMessage) : firstMessage;
+    } catch (err) {
+        console.error('Failed to parse first_message:', err);
+        return { sector: null, size: null, investor_origin: null, location_details: {} };
+    }
 
-  // Extract business size
-  const size = data.business_size || null;
+    // console.log('First message data:', data);
 
-  // Extract nationality/investor origin
-  const investor_origin = data.nationality || null;
+    // Extract sector with title lookup
+    const sector = data.sector ? sectorMapping[data.sector] || null : null;
 
-  // Build location_details JSON
-  const location_details = {
-    location_company_hq: {
-      country: data.business_hq || "",
-      province: data.business_hq_province || ""
-    },
-    location_prl: {
-      province: [],
-      district_municipality: []
-    },
-    sphere: data.region || ""
-  };
+    // Extract business size
+    const size = data.business_size || null;
 
-  // Only populate location_prl if location_empediment is "provincial"
-  if (data.location_empediment === "provincial") {
-    // Add provinces (replace "not_sure" with empty string, filter out undefined/null)
-    const provinces = [data.first_province, data.second_province, data.third_province]
-      .map(p => p === "not_sure" ? "" : p)
-      .filter(p => p !== undefined && p !== null);
-    location_details.location_prl.province = provinces;
+    // Extract nationality/investor origin
+    const investor_origin = data.nationality || null;
 
-    // Add municipalities (replace "not_sure" with empty string, filter out undefined/null)
-    const municipalities = [data.first_municipality, data.second_municipality, data.third_municipality]
-      .map(m => m === "not_sure" ? "" : m)
-      .filter(m => m !== undefined && m !== null);
-    location_details.location_prl.district_municipality = municipalities;
-  }
+    // Build location_details JSON
+    const location_details = {
+        location_company_hq: {
+        country: data.business_hq || "",
+        province: data.business_hq_province || ""
+        },
+        location_prl: {
+        province: [],
+        district_municipality: []
+        },
+        sphere: data.region || ""
+    };
 
-  return {
-    sector,
-    size,
-    investor_origin,
-    location_details: JSON.stringify(location_details)
-  };
+    // Only populate location_prl if location_empediment is "provincial"
+    if (data.location_empediment === "provincial") {
+        // Add provinces (replace "not_sure" with empty string, filter out undefined/null)
+        const provinces = [data.first_province, data.second_province, data.third_province]
+        .map(p => p === "not_sure" ? "" : p)
+        .filter(p => p !== undefined && p !== null);
+        location_details.location_prl.province = provinces;
+
+        // Add municipalities (replace "not_sure" with empty string, filter out undefined/null)
+        const municipalities = [data.first_municipality, data.second_municipality, data.third_municipality]
+        .map(m => m === "not_sure" ? "" : m)
+        .filter(m => m !== undefined && m !== null);
+        location_details.location_prl.district_municipality = municipalities;
+    }
+
+    return {
+        sector,
+        size,
+        investor_origin,
+        location_details: JSON.stringify(location_details)
+    };
 }
 
 // --- PII Redaction ---
@@ -221,12 +241,12 @@ async function cleanup() {
     for (const term of expiredTerms) {
       // Find associated conversations
       const { rows: conversations } = await query(`
-        SELECT * FROM conversations WHERE phone_number = $1 AND expired_at IS NOT NULL
+        SELECT * FROM conversations WHERE phone_number = $1
       `, [term.phone_number]);
 
       for (const conv of conversations) {
 
-        console.log("Trying to read from user_terms")
+        //console.log("Trying to read from user_terms")
 
         // Parse first_message for structured data
         const { sector, size, investor_origin, location_details } = parseFirstMessage(conv.first_message);
@@ -267,33 +287,33 @@ async function cleanup() {
 
     for (const conv of expiredConvs) {
 
-        console.log("Trying to read from conversations")
+        //console.log("Trying to read from conversations")
 
-      // Parse first_message for structured data
-      const { sector, size, investor_origin, location_details } = parseFirstMessage(conv.first_message);
+        // Parse first_message for structured data
+        const { sector, size, investor_origin, location_details } = parseFirstMessage(conv.first_message);
 
-      // Sanitize conversation data (remove PII)
-      const sanitizedData = sanitizeConversation(conv.data);
-      const sanitizedDataTranslated = sanitizeConversation(conv.data_translated);
+        // Sanitize conversation data (remove PII)
+        const sanitizedData = sanitizeConversation(conv.data);
+        const sanitizedDataTranslated = sanitizeConversation(conv.data_translated);
 
-      const user_id = hashPhoneNumber(conv.phone_number);
-      const location = location_details;
-      const date = getMonday(conv.started_at);
-      const conversation = JSON.stringify(sanitizedData);
-      const original_conversation = JSON.stringify(sanitizedDataTranslated);
+        const user_id = hashPhoneNumber(conv.phone_number);
+        const location = location_details;
+        const date = getMonday(conv.started_at);
+        const conversation = JSON.stringify(sanitizedData);
+        const original_conversation = JSON.stringify(sanitizedDataTranslated);
 
-      // Insert into long-term DB
-      await longTermQuery(`
-        INSERT INTO survey_responses
-        (user_id, location, date, conversation, original_conversation, sector, size, investor_origin)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [user_id, location, date, conversation, original_conversation, sector, size, investor_origin]);
+        // Insert into long-term DB
+        await longTermQuery(`
+            INSERT INTO survey_responses
+            (user_id, location, date, conversation, original_conversation, sector, size, investor_origin)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `, [user_id, location, date, conversation, original_conversation, sector, size, investor_origin]);
 
-      // Delete messages
-      await query(`DELETE FROM messages WHERE conversation_id = $1`, [conv.conversation_id]);
+        // Delete messages
+        await query(`DELETE FROM messages WHERE conversation_id = $1`, [conv.conversation_id]);
 
-      // Delete conversation
-      await query(`DELETE FROM conversations WHERE conversation_id = $1`, [conv.conversation_id]);
+        // Delete conversation
+        await query(`DELETE FROM conversations WHERE conversation_id = $1`, [conv.conversation_id]);
     }
 
     console.log(`✅ Cleanup completed at ${new Date().toISOString()}`);
