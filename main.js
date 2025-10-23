@@ -189,16 +189,23 @@ app.post("/webhook", async (req, res) => {
     let detectedLanguage = null;
     let translatedText = null;
     let originalText = incoming.text?.body || null;
+    let shouldUseEnglish = false;
+    let detectionConfidence = 0;
 
     // Translate text if necessary
     if (incoming.type === "text" && originalText) {
       // detect & translate
-      const tr = await detectAndTranslate(originalText, 'en'); // default target en
-      detectedLanguage = tr.originalLanguage || null;
+      const tr = await detectAndTranslate(originalText, 'en', 0.8); // default target en
+      detectedLanguage = tr.originalLanguage || 'en';
       translatedText = tr.translatedText || originalText;
+      shouldUseEnglish = tr.shouldUseEnglish || false;
+      detectionConfidence = tr.confidence || 0;
+
+      console.log(`🌐 Language Detection: ${detectedLanguage} (confidence: ${detectionConfidence}, useEnglish: ${shouldUseEnglish})`);
     } else {
       // non-text messages keep null
       translatedText = originalText;
+      detectedLanguage = 'en';
     }
 
     // Save incomming message
@@ -334,7 +341,7 @@ app.post("/webhook", async (req, res) => {
 
             let pendingData = resPending.rows[0]?.data || [];
             let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
-            const convLanguage = resPending.rows[0]?.language || 'en';
+            const responseLanguage = shouldUseEnglish ? 'en' : detectedLanguage;
 
             let saveData = [...pendingData]; // copy for saving, does not include system prompt
             let saveDataTranslated = [...pendingDataTranslated];
@@ -348,8 +355,8 @@ app.post("/webhook", async (req, res) => {
               let messageText = aiResponse.text;
 
               // Translate if conversation.language is not English
-              if (convLanguage && convLanguage !== 'en') {
-                const translated = await translateToSelectedLanguage(messageText, convLanguage);
+              if (responseLanguage && responseLanguage !== 'en') {
+                const translated = await translateToSelectedLanguage(messageText, responseLanguage);
                 messageText = translated;
               }
 
@@ -404,6 +411,8 @@ app.post("/webhook", async (req, res) => {
           const dataArray = [{ role: "user", content: messageEnglish }];
           const dataTranslatedArray = [{ role: "user", content: messageOriginal }];
 
+          const langToStore = shouldUseEnglish ? 'en' : detectedLanguage;
+
           await query(
             `UPDATE conversations 
             SET data = $1, 
@@ -414,7 +423,7 @@ app.post("/webhook", async (req, res) => {
             [
               JSON.stringify(dataArray),
               JSON.stringify(dataTranslatedArray),
-              detectedLanguage, // the detected language code, e.g., "en" or "fr"
+              langToStore, // the detected language code, e.g., "en" or "fr"
               conversation.conversation_id
             ]
           );
@@ -446,7 +455,7 @@ app.post("/webhook", async (req, res) => {
 
         let pendingData = resPending.rows[0]?.data || [];
         let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
-        const convLanguage = resPending.rows[0]?.language || 'en';
+        const currentMessageLanguage = shouldUseEnglish ? 'en' : detectedLanguage;
 
         let saveData = [...pendingData]; // copy of conversation history
         let saveDataTranslated = [...pendingDataTranslated];
@@ -503,8 +512,8 @@ app.post("/webhook", async (req, res) => {
           if (responseType === "-") {
 
             // Translate if conversation language is not English
-            if (convLanguage && convLanguage !== 'en') {
-              const translated = await translateToSelectedLanguage(messageText, convLanguage);
+            if (currentMessageLanguage && currentMessageLanguage !== 'en') {
+              const translated = await translateToSelectedLanguage(messageText, currentMessageLanguage);
               messageText = translated;
             }
 
@@ -518,9 +527,9 @@ app.post("/webhook", async (req, res) => {
 
             await query(
               `UPDATE conversations 
-              SET data = $1, data_translated = $2, updated_time = NOW(), message_limit = $3 
-              WHERE conversation_id = $4`,
-              [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), userMessageCount + 1, conversation.conversation_id]
+              SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), message_limit = $4 
+              WHERE conversation_id = $5`,
+              [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), currentMessageLanguage, userMessageCount + 1, conversation.conversation_id]
             );
 
           } else if (responseType === "location_request") {
@@ -542,9 +551,9 @@ app.post("/webhook", async (req, res) => {
 
             await query(
               `UPDATE conversations 
-              SET data = $1, data_translated = $2, updated_time = NOW(), state = 'structured', message_limit = $3 
-              WHERE conversation_id = $4`,
-              [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), userMessageCount + 1, conversation.conversation_id]
+              SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), state = 'structured', message_limit = $4 
+              WHERE conversation_id = $5`,
+              [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), currentMessageLanguage, userMessageCount + 1, conversation.conversation_id]
             );
           } else {
             console.warn("⚠️ Unknown AI response type:", responseType);
