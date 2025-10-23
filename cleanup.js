@@ -226,6 +226,8 @@ async function cleanup() {
 
       for (const conv of conversations) {
 
+        console.log("Trying to read from user_terms")
+
         // Parse first_message for structured data
         const { sector, size, investor_origin, location_details } = parseFirstMessage(conv.first_message);
 
@@ -264,6 +266,8 @@ async function cleanup() {
     `);
 
     for (const conv of expiredConvs) {
+
+        console.log("Trying to read from conversations")
 
       // Parse first_message for structured data
       const { sector, size, investor_origin, location_details } = parseFirstMessage(conv.first_message);
