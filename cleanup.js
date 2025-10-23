@@ -45,6 +45,8 @@ function parseFirstMessage(firstMessage) {
     return { sector: null, size: null, investor_origin: null, location_details: {} };
   }
 
+  console.log('First message data:', data);
+
   // Extract sector with title lookup
   const sector = data.sector ? sectorMapping[data.sector] || null : null;
 
