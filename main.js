@@ -207,10 +207,22 @@ app.post("/webhook", async (req, res) => {
 
     // --- If Quit is typed at any stage, perform the following ---
     if ( incoming.type === "text" && body && body.trim().toLowerCase() === "quit") {
+      // Delete data
       await query(
-        `UPDATE conversations SET first_message = NULL, state = 'finish', updated_time = NOW() WHERE conversation_id = $1`,
+        `DELETE FROM user_terms WHERE phone_number = $1`,
+        [from]
+      );
+
+      await query(
+        `DELETE FROM messages WHERE conversation_id = $1`,
         [conversation.conversation_id]
       );
+
+      await query(
+        `DELETE FROM conversations WHERE conversation_id = $1`,
+        [conversation.conversation_id]
+      );
+
       // TODO: delete the data of the user
       await sendText(
         conversation.conversation_id,
@@ -360,8 +372,19 @@ app.post("/webhook", async (req, res) => {
           }
 
           if (replyId === "quit_terms") {
+            // Delete data
             await query(
-              `UPDATE conversations SET first_message = NULL, state = 'finish', updated_time = NOW() WHERE conversation_id = $1`,
+              `DELETE FROM user_terms WHERE phone_number = $1`,
+              [from]
+            );
+
+            await query(
+              `DELETE FROM messages WHERE conversation_id = $1`,
+              [conversation.conversation_id]
+            );
+
+            await query(
+              `DELETE FROM conversations WHERE conversation_id = $1`,
               [conversation.conversation_id]
             );
             //TODO: delete the data of the user
