@@ -270,13 +270,13 @@ app.post("/webhook", async (req, res) => {
     // }
 
     // Decide which message content to use
-    let messageForAI;
+    let messageForAI = translatedText || body;
 
-    if (detectedLanguage === "en" || detectedLanguage === "eng" || detectedLanguage?.startsWith("en")) {
-      messageForAI = body;
-    } else {
-      messageForAI = translatedText || body; // fallback to body if translation failed
-    }
+    // if (detectedLanguage === "en" || detectedLanguage === "eng" || detectedLanguage?.startsWith("en")) {
+    //   messageForAI = body;
+    // } else {
+    //   messageForAI = translatedText || body; // fallback to body if translation failed
+    // }
 
     console.log(`🗣️ Using message for AI: "${messageForAI}" (lang=${detectedLanguage})`);
 
