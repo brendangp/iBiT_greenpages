@@ -341,7 +341,7 @@ app.post("/webhook", async (req, res) => {
 
             let pendingData = resPending.rows[0]?.data || [];
             let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
-            const responseLanguage = shouldUseEnglish ? 'en' : detectedLanguage;
+            const responseLanguage = resPending.rows[0]?.language || 'en';
 
             let saveData = [...pendingData]; // copy for saving, does not include system prompt
             let saveDataTranslated = [...pendingDataTranslated];
