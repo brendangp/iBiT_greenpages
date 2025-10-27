@@ -97,15 +97,15 @@ async function detectAndTranslate(text, target = 'en', confidenceThreshold = 0.8
     console.log(`🌍 Detected language: ${languageCode} (confidence: ${confidence})`);
 
     // If confidence is too low, default to English
-    if (confidence < confidenceThreshold) {
-      console.log(`⚠️ Low confidence (${confidence}) - defaulting to English`);
-      return {
-        originalLanguage: 'en',
-        confidence: confidence,
-        translatedText: text,
-        shouldUseEnglish: true
-      };
-    }
+    // if (confidence < confidenceThreshold) {
+    //   console.log(`⚠️ Low confidence (${confidence}) - defaulting to English`);
+    //   return {
+    //     originalLanguage: 'en',
+    //     confidence: confidence,
+    //     translatedText: text,
+    //     shouldUseEnglish: true
+    //   };
+    // }
 
     // If already English, short circuit
     if (languageCode === 'en' || languageCode === 'en-US') {
