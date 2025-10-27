@@ -356,15 +356,15 @@ app.post("/webhook", async (req, res) => {
             let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
             const responseLanguage = shouldUseEnglish ? 'en': resPending.rows[0]?.language || originalLanguage || 'en';
             console.log("responsLanguage", responseLanguage);
-            console.log(pendingData);
-            console.log(pendingDataTranslated);
+            // console.log(pendingData);
+            // console.log(pendingDataTranslated);
 
             let saveData = [...pendingData]; // copy for saving, does not include system prompt
             let saveDataTranslated = [...pendingDataTranslated];
 
             // Prepare AI input with system prompt (but do not save this in DB)
             const aiInput = [...pendingData, { role: "system", content: prompts.system_prompt }];
-            console.log(aiInput);
+            // console.log(aiInput);
 
             const aiResponse = await getResponses(aiInput);
 
@@ -474,6 +474,9 @@ app.post("/webhook", async (req, res) => {
         let pendingData = resPending.rows[0]?.data || [];
         let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
         const currentMessageLanguage = shouldUseEnglish ? 'en' : detectedLanguage;
+        console.log(pendingData);
+        console.log(pendingDataTranslated);
+        console.log("currentMessageLanguage", currentMessageLanguage);
 
         let saveData = [...pendingData]; // copy of conversation history
         let saveDataTranslated = [...pendingDataTranslated];
@@ -517,15 +520,17 @@ app.post("/webhook", async (req, res) => {
         // Prepare AI input: all history + system prompt
         const aiInput = [
           ...pendingData,
-          { role: "user", content: `± ${translatedText} ±` },  // wrapped only for AI
+          { role: "user", content: `± ${translatedText} ±` },  // TDOD: check what text needs to go here, maybe messageForAI?
           { role: "system", content: prompts.system_prompt }
         ];
+        console.log("AI Input:", aiInput);
 
         const aiResponse = await getResponses(aiInput);
 
         if (aiResponse) {
           const responseType = aiResponse.type || "-";
           let messageText = aiResponse.text || aiResponse; // fallback
+          console.log("🤖 AI Response before translation:", messageText);
 
           if (responseType === "-") {
 
