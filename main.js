@@ -201,12 +201,18 @@ app.post("/webhook", async (req, res) => {
       shouldUseEnglish = tr.shouldUseEnglish || false;
       detectionConfidence = tr.confidence || 0;
 
-      console.log(`🌐 Language Detection: ${detectedLanguage} (confidence: ${detectionConfidence}, useEnglish: ${shouldUseEnglish})`);
     } else {
       // non-text messages keep null
       translatedText = originalText;
       detectedLanguage = 'en';
     }
+
+    
+    console.log(`Original Text: "${originalText}"
+      Translated Text: "${translatedText}"
+      Language Detection: ${detectedLanguage} 
+      Confidence: ${detectionConfidence}
+      useEnglish: ${shouldUseEnglish}`);
 
     // Save incomming message
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
@@ -470,7 +476,7 @@ app.post("/webhook", async (req, res) => {
         let saveDataTranslated = [...pendingDataTranslated];
 
         if (!isReturningUserFirstMessage) {
-          saveData.push({ role: "user", content: translatedText });
+          saveData.push({ role: "user", content: messageForAI });
           saveDataTranslated.push({ role: "user", content: originalText });
         }
 
