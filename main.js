@@ -520,7 +520,7 @@ app.post("/webhook", async (req, res) => {
         // Prepare AI input: all history + system prompt
         const aiInput = [
           ...pendingData,
-          { role: "user", content: `± ${translatedText} ±` },  // TDOD: check what text needs to go here, maybe messageForAI?
+          { role: "user", content: `± ${messageForAI} ±` },  // TDOD: check what text needs to go here, maybe messageForAI?
           { role: "system", content: prompts.system_prompt }
         ];
         console.log("AI Input:", aiInput);

@@ -113,7 +113,7 @@ async function detectAndTranslate(text, target = 'en', confidenceThreshold = 0.8
         originalLanguage: 'en', 
         confidence, 
         translatedText: text,
-        shouldUseEnglish: false 
+        shouldUseEnglish: true 
       };
     }
 
