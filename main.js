@@ -474,9 +474,9 @@ app.post("/webhook", async (req, res) => {
         let pendingData = resPending.rows[0]?.data || [];
         let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
         const currentMessageLanguage = shouldUseEnglish ? 'en' : detectedLanguage;
-        // console.log(pendingData);
-        // console.log(pendingDataTranslated);
-        // console.log("currentMessageLanguage", currentMessageLanguage);
+        console.log(pendingData);
+        console.log(pendingDataTranslated);
+        console.log("currentMessageLanguage", currentMessageLanguage);
 
         let saveData = [...pendingData]; // copy of conversation history
         let saveDataTranslated = [...pendingDataTranslated];
@@ -523,7 +523,7 @@ app.post("/webhook", async (req, res) => {
           { role: "user", content: `± ${translatedText} ±` },  // TDOD: check what text needs to go here, maybe messageForAI?
           { role: "system", content: prompts.system_prompt }
         ];
-        //console.log("AI Input:", aiInput);
+        console.log("AI Input:", aiInput);
 
         const aiResponse = await getResponses(aiInput);
 
