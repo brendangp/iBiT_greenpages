@@ -917,7 +917,7 @@
                                 "type": "If",
                                 "condition": "${form.business_headquarters} == 'South Africa'",
                                 "then": [
-                                {
+                                    {
                                         "type": "Dropdown",
                                         "name": "province_headquarters",
                                         "label": "Choose the province",

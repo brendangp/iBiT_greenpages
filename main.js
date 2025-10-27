@@ -270,8 +270,15 @@ app.post("/webhook", async (req, res) => {
     // }
 
     // Decide which message content to use
-    let messageForAI = translatedText || body;
-
+    let messageForAI;
+    if (shouldUseEnglish) {
+      // Use the original message or "Hello" — whichever you prefer
+      messageForAI = body;  
+    } else {
+      // Use the translated version if it's a non-English message
+      messageForAI = translatedText;
+    }
+    // let messageForAI = translatedText || body;
     // if (detectedLanguage === "en" || detectedLanguage === "eng" || detectedLanguage?.startsWith("en")) {
     //   messageForAI = body;
     // } else {
