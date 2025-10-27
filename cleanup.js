@@ -22,14 +22,14 @@ function getMonday(date) {
 
 // Sector lookup mapping
 const sectorMapping = {
-  "agri": "Agriculture, forestry, and fishing",
+  "agri": "Agriculture, forestry and fishing",
   "mining": "Mining and quarrying",
   "manufacturing": "Manufacturing",
-  "utilities": "Electricity, gas, and water",
+  "utilities": "Electricity, gas and water",
   "construction": "Construction",
   "trade": "Trade, catering and accommodation",
   "transport": "Transport, storage and communication",
-  "finance": "Finance, real estate, and business services",
+  "finance": "Finance, real estate and business services",
   "government": "General government services",
   "personal": "Personal services",
   "tourism": "Tourism"

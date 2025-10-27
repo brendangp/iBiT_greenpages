@@ -32,17 +32,18 @@
                             },
                             {
                                 "type": "TextBody",
-                                "text": "What Sector does your business operate in?"
+                                "markdown": true,
+                                "text": "**What sector does your business operate in?**"
                             },
                             {
                                 "type": "Dropdown",
                                 "name": "sectors",
-                                "label": "Choose you Sector",
+                                "label": "Choose your sector",
                                 "required": true,
                                 "data-source": [
                                     {
                                         "id": "agri",
-                                        "title": "Agriculture, forestry, and fishing"
+                                        "title": "Agriculture, forestry and fishing"
                                     },
                                     {
                                         "id": "mining",
@@ -54,7 +55,7 @@
                                     },
                                     {
                                         "id": "utilities",
-                                        "title": "Electricity, gas, and water"
+                                        "title": "Electricity, gas and water"
                                     },
                                     {
                                         "id": "construction",
@@ -70,7 +71,7 @@
                                     },
                                     {
                                         "id": "finance",
-                                        "title": "Finance, real estate, and business services"
+                                        "title": "Finance, real estate and business services"
                                     },
                                     {
                                         "id": "government",
@@ -88,7 +89,8 @@
                             },
                             {
                                 "type": "TextBody",
-                                "text": "What is roughly the size of your business?"
+                                "markdown": true,
+                                "text": "**What is roughly the size of your business?**"
                             },
                             {
                                 "type": "Dropdown",
@@ -136,7 +138,8 @@
                             },
                             {
                                 "type": "TextBody",
-                                "text": "Where are your headquarters located?"
+                                "markdown": true,
+                                "text": "**Where are your headquarters located?**"
                             },
                             {
                                 "type": "Dropdown",
@@ -909,7 +912,6 @@
                                         "title": "Zimbabwe"
                                     }
                                 ]
-
                             },
                             {
                                 "type": "If",
