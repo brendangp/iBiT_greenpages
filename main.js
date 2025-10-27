@@ -208,7 +208,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     
-    console.log(`Original Text: "${originalText}"
+    console.log(`     Original Text: "${originalText}"
       Translated Text: "${translatedText}"
       Language Detection: ${detectedLanguage} 
       Confidence: ${detectionConfidence}
@@ -356,12 +356,15 @@ app.post("/webhook", async (req, res) => {
             let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
             const responseLanguage = shouldUseEnglish ? 'en': resPending.rows[0]?.language || originalLanguage || 'en';
             console.log("responsLanguage", responseLanguage);
+            console.log(pendingData);
+            console.log(pendingDataTranslated);
 
             let saveData = [...pendingData]; // copy for saving, does not include system prompt
             let saveDataTranslated = [...pendingDataTranslated];
 
             // Prepare AI input with system prompt (but do not save this in DB)
             const aiInput = [...pendingData, { role: "system", content: prompts.system_prompt }];
+            console.log(aiInput);
 
             const aiResponse = await getResponses(aiInput);
 
@@ -421,7 +424,7 @@ app.post("/webhook", async (req, res) => {
         // Terms not accepted yet: store pending message and send terms
         if (!conversation.terms_accepted) {
           const messageEnglish = messageForAI;
-          const messageOriginal = body || "[Non-text message]";
+          const messageOriginal = body || "[Non-text message]"; //TODO I wonder if this should be originalText instead
 
           const dataArray = [{ role: "user", content: messageEnglish }];
           const dataTranslatedArray = [{ role: "user", content: messageOriginal }];
