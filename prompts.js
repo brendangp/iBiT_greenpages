@@ -17,6 +17,9 @@ By continuing this conversation, you confirm that you are over 18 years of age, 
 
   quit_response: `Your data has been deleted. Have a good day further!`,
 
+  // Typing any of these on its own (case-insensitive) deletes the user's data at any stage
+  quit_keywords: ["quit", "stop"],
+
   // Sent with the Flow immediately after the terms are accepted, before the AI interview
   flow_intro_message: `Thank you for accepting the terms. Before we chat, please answer a few quick questions about your business by tapping the button below.`,
 
@@ -34,7 +37,7 @@ By continuing this conversation, you confirm that you are over 18 years of age, 
 
   response_to_location_pin: `Thank you for sharing your location pin. Can you tell me anything else about the barrier to investment that could be helpful?`,
 
-  terms_of_use_footer: "Type QUIT at anytime if you wish to delete your data.", // Has to be less than 60 characters
+  terms_of_use_footer: "Type QUIT or STOP anytime to delete your data.", // Has to be less than 60 characters
 
   emergency_prompt: `You are an agent that labels messages "emergency" if they are about a critical, ongoing emergency situation. 
 Label them "-" otherwise.
