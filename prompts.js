@@ -17,6 +17,21 @@ By continuing this conversation, you confirm that you are over 18 years of age, 
 
   quit_response: `Your data has been deleted. Have a good day further!`,
 
+  // Sent with the Flow immediately after the terms are accepted, before the AI interview
+  flow_intro_message: `Thank you for accepting the terms. Before we chat, please answer a few quick questions about your business by tapping the button below.`,
+
+  // Sent when the user replies with a normal message instead of completing the Flow
+  flow_nudge_message: `Please tap the button below and complete the short form so that we can continue.`,
+
+  // Sent when the user has ignored the Flow too many times
+  flow_abandoned_message: `No problem — we'll stop here since the form wasn't completed. You can start again at any time if you'd like to submit an investment barrier. Thanks for your time.`,
+
+  // Sent when the interview reaches the message limit
+  interview_complete_message: `Thank you for sharing your experience. You've reached the end of this conversation — your input will help identify policy and regulatory barriers to investment in South Africa.`,
+
+  // How many times the Flow may be sent before the conversation is closed
+  flow_send_limit: 3,
+
   response_to_location_pin: `Thank you for sharing your location pin. Can you tell me anything else about the barrier to investment that could be helpful?`,
 
   terms_of_use_footer: "Type QUIT at anytime if you wish to delete your data.", // Has to be less than 60 characters
@@ -59,7 +74,7 @@ If you are in an emergency situation, contact:
     2) The severity, duration, and effects of those laws, policies or regulations on the business or investment environment. 
     3) The value (amount) of the investment that was withheld. 
     4) How the user believes the policy, regulation or law should be changed for the situation to be improved.
-    5) At the end of the conversation, thank the user for their input and ask them to complete standardized survey questions that follow the conversation you have with them. Signal to the app that you are done with the conversation by labeling your last message with the type 'location_request'.
+    5) At the end of the conversation, thank the user for their input and let them know their contribution has been recorded. The standardized survey questions were already answered by the user before this conversation started, so never ask them to complete a form or answer further questions. Signal to the app that you are done with the conversation by labeling your last message with the type 'location_request'.
 
   ### STYLE ###
   Your style should be colloquial and in the language of the user. 
@@ -76,8 +91,8 @@ If you are in an emergency situation, contact:
    ### RESPONSE FORMAT ###
   Each of your responses must adhere to a structured JSON format compliant with RFC8259:
   {"text": "Your message here", "type": "location_request" or "-"}
-  The "text" field contains my message directed to the user, and the "type" field specifies whether the message is a request for the further information that will be obtained with standardized survey questions that follow.
-  {"text": "Thank you. We will now ask you to complete provide specific information that will help us understand the context of the investment barrier.", "type": "location_request"}
+  The "text" field contains my message directed to the user, and the "type" field specifies whether this is your final, closing message. Use "-" while the conversation is ongoing and "location_request" on your last message only.
+  {"text": "Thank you for your input. Your feedback has been recorded and will help us understand the context of the investment barrier.", "type": "location_request"}
 
   ### PROGRESSION LOGIC ###
   When the user has provided sufficient information about the barrier to investment, thank them for their assistance and label the message type 'location_request'.
@@ -125,7 +140,7 @@ If you are in an emergency situation, contact:
   User: "± No, that's all. ±"
   Assistant:
   {
-    "text": "Thank you for sharing your experience and insights about barriers to investment in South Africa. Before we end off, we want to ask you a couple of quick questions that will help us understand the context of the investment barrier.",
+    "text": "Thank you for sharing your experience and insights about barriers to investment in South Africa. Your input has been recorded and will help identify the policy and regulatory changes needed.",
     "type": "location_request"
   }
     
@@ -157,7 +172,7 @@ If you are in an emergency situation, contact:
   User: "± No ±"
   Assistant:
   {
-    "text": "Your feedback will be useful for helping to identify the policy and regulatory barriers to investment in South Africa. As a final step, we will now ask you to provide specific information that will help us understand the context of the investment barrier.",
+    "text": "Your feedback will be useful for helping to identify the policy and regulatory barriers to investment in South Africa. Thank you for your time — your input has been recorded.",
     "type": "location_request"
   }
   `,
@@ -190,6 +205,9 @@ If you are in an emergency situation, contact:
     stop: null
   },
 
+  // NOTE: the AI response type "location_request" is kept for backwards compatibility with the
+  // tuned system prompt, but it now means "the interview is finished — close the conversation".
+  // The Flow is sent before the interview starts, not in response to this type.
   flow_params: {
     flowId: 1211841967129307,
     flowCta: "Answer Questions",

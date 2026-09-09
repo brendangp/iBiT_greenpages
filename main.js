@@ -123,6 +123,80 @@ async function saveUserTerms(phoneNumber, accepted) {
 }
 
 
+/* ---------------- Survey Flow ---------------- */
+// Sent once the terms are accepted, before the AI interview, and re-sent as a nudge
+// if the user replies with anything other than a Flow submission.
+async function sendSurveyFlow(conversationId, to, botNumber, language, bodyText = null) {
+  let text = bodyText || prompts.flow_intro_message;
+
+  if (language && language !== "en") {
+    text = await translateToSelectedLanguage(text, language);
+  }
+
+  await sendFlow(
+    conversationId,
+    to,
+    prompts.flow_params.flowId,
+    prompts.flow_params.flowCta,
+    text,
+    botNumber,
+    "Powered by greenpages.app"
+  );
+}
+
+// How many Flows have already gone out on this conversation (sendFlow logs each as type 'flow')
+async function countFlowsSent(conversationId) {
+  const res = await query(
+    `SELECT COUNT(*) AS count FROM messages WHERE conversation_id = $1 AND type = 'flow'`,
+    [conversationId]
+  );
+  return parseInt(res.rows[0]?.count || "0", 10);
+}
+
+// Close a conversation so cleanup.js picks it up on its next run
+async function finishConversation(conversationId) {
+  await query(
+    `UPDATE conversations
+     SET state = 'finish', updated_time = NOW(), expired_at = NOW()
+     WHERE conversation_id = $1`,
+    [conversationId]
+  );
+}
+
+/* ---------------- AI turn ---------------- */
+// Run the model over the stored history, send the reply and persist it.
+// Used for the first AI reply, once the survey Flow has been submitted.
+async function runAiTurn(conversationId, to, botNumber, language, pendingData, pendingDataTranslated) {
+  const saveData = [...pendingData];
+  const saveDataTranslated = [...pendingDataTranslated];
+
+  // The system prompt is never persisted — it is appended only when building the request
+  const aiInput = [...pendingData, { role: "system", content: prompts.system_prompt }];
+
+  const aiResponse = await getResponses(aiInput);
+  if (!aiResponse) return;
+
+  let messageText = aiResponse.text;
+  console.log("AI Response before translation:", messageText);
+
+  if (language && language !== "en") {
+    messageText = await translateToSelectedLanguage(messageText, language);
+  }
+
+  console.log("🤖 AI Response:", messageText);
+  await sendText(conversationId, to, messageText, botNumber);
+
+  saveData.push({ role: "assistant", content: aiResponse.text });
+  saveDataTranslated.push({ role: "assistant", content: messageText });
+
+  await query(
+    `UPDATE conversations
+     SET data = $1, data_translated = $2, updated_time = NOW()
+     WHERE conversation_id = $3`,
+    [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), conversationId]
+  );
+}
+
 /* ---------------- Webhook verification ---------------- */
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
@@ -293,40 +367,35 @@ app.post("/webhook", async (req, res) => {
 
     console.log(`🗣️ Using message for AI: "${messageForAI}" (lang=${detectedLanguage})`);
 
-    let isReturningUserFirstMessage = false;
-
-    // --- Determine how to proceed for active/unstructured based on user_terms---
+    // --- Determine how to proceed for active based on user_terms ---
+    // Returning users skip the terms, but still complete the survey Flow before the interview
     if (conversation.state === "active" && userTerms && userTerms.terms_accepted) {
       console.log("✅ Returning user — skipping terms");
 
-      // Immediately set conversation state to unstructured if not already
-      if (conversation.state !== "unstructured") {
-        // ✅ FIX: Initialize data arrays for returning users
-        isReturningUserFirstMessage = true;
+      // Buffer the first message; it is answered by the AI once the Flow comes back
+      const dataArray = [{ role: "user", content: messageForAI }];
+      const dataTranslatedArray = [{ role: "user", content: body }];
+      const langToStore = shouldUseEnglish ? 'en' : (detectedLanguage || 'en');
 
-        const dataArray = [{ role: "user", content: messageForAI }];
-        const dataTranslatedArray = [{ role: "user", content: body }];
+      await query(
+        `UPDATE conversations
+        SET state = 'structured',
+            terms_accepted = true,
+            data = $1,
+            data_translated = $2,
+            language = $3,
+            updated_time = NOW()
+        WHERE conversation_id = $4`,
+        [
+          JSON.stringify(dataArray),
+          JSON.stringify(dataTranslatedArray),
+          langToStore,
+          conversation.conversation_id
+        ]
+      );
 
-        await query(
-          `UPDATE conversations 
-          SET state = 'unstructured', 
-              terms_accepted = true, 
-              data = $1, 
-              data_translated = $2, 
-              language = $3, 
-              updated_time = NOW() 
-          WHERE conversation_id = $4`,
-          [
-            JSON.stringify(dataArray), 
-            JSON.stringify(dataTranslatedArray), 
-            detectedLanguage || 'en',
-            conversation.conversation_id
-          ]
-        );
-      }
-
-      // Skip the “active” case entirely and jump to unstructured logic
-      conversation.state = "unstructured";
+      await sendSurveyFlow(conversation.conversation_id, from, botNumber, langToStore);
+      return;
     }
 
     // --- State machine logic ---
@@ -337,9 +406,10 @@ app.post("/webhook", async (req, res) => {
           const replyId = incoming.interactive.button_reply.id;
 
           if (replyId === "continue_terms") {
+            // Terms accepted → survey Flow first, the AI interview follows its submission
             await query(
-              `UPDATE conversations 
-               SET terms_accepted = true, state = 'unstructured', updated_time = NOW() 
+              `UPDATE conversations
+               SET terms_accepted = true, state = 'structured', updated_time = NOW()
                WHERE conversation_id = $1`,
               [conversation.conversation_id]
             );
@@ -348,51 +418,14 @@ app.post("/webhook", async (req, res) => {
             await saveUserTerms(from, true);
 
             const resPending = await query(
-              `SELECT data, data_translated, language FROM conversations WHERE conversation_id = $1`,
+              `SELECT language FROM conversations WHERE conversation_id = $1`,
               [conversation.conversation_id]
             );
 
-            let pendingData = resPending.rows[0]?.data || [];
-            let pendingDataTranslated = resPending.rows[0]?.data_translated || [];
-            const responseLanguage = shouldUseEnglish ? 'en': resPending.rows[0]?.language || originalLanguage || 'en';
-            console.log("responsLanguage", responseLanguage);
-            // console.log(pendingData);
-            // console.log(pendingDataTranslated);
+            const responseLanguage = resPending.rows[0]?.language || 'en';
+            console.log("responseLanguage", responseLanguage);
 
-            let saveData = [...pendingData]; // copy for saving, does not include system prompt
-            let saveDataTranslated = [...pendingDataTranslated];
-
-            // Prepare AI input with system prompt (but do not save this in DB)
-            const aiInput = [...pendingData, { role: "system", content: prompts.system_prompt }];
-            // console.log(aiInput);
-
-            const aiResponse = await getResponses(aiInput);
-
-            if (aiResponse) {
-              let messageText = aiResponse.text;
-              console.log("AI Response before translation:", messageText);
-
-              // Translate if conversation.language is not English
-              if (responseLanguage && responseLanguage !== 'en') {
-                const translated = await translateToSelectedLanguage(messageText, responseLanguage);
-                messageText = translated;
-              }
-
-              console.log("🤖 AI Response:", messageText);
-              await sendText(conversation.conversation_id, from, messageText, botNumber);
-
-              // Append AI response to data array
-              saveData.push({ role: "assistant", content: aiResponse.text });
-              saveDataTranslated.push({ role: "assistant", content: messageText });
-
-              // Update conversation in database
-              await query(
-                `UPDATE conversations 
-                SET data = $1, data_translated = $2, updated_time = NOW() 
-                WHERE conversation_id = $3`,
-                [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), conversation.conversation_id]
-              );
-            }
+            await sendSurveyFlow(conversation.conversation_id, from, botNumber, responseLanguage);
 
             return;
           }
@@ -460,11 +493,96 @@ app.post("/webhook", async (req, res) => {
         }
         break;
 
+      case "structured":
+        // Survey Flow stage — the form is sent before the AI interview and has to come
+        // back before we hand the conversation over to the model.
+        if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
+          const nfm = incoming.interactive.nfm_reply;
+
+          try {
+            const responseData = JSON.parse(nfm.response_json);
+
+            // Remove flow_token from response
+            const { flow_token, ...savedData } = responseData;
+
+            // Save the form response and move on to the free-form interview
+            await query(
+              `UPDATE conversations
+              SET first_message = $1, updated_time = NOW(), state = 'unstructured'
+              WHERE conversation_id = $2`,
+              [JSON.stringify(savedData), conversation.conversation_id]
+            );
+
+            // Answer the message the user sent before the terms/Flow with the AI
+            const resPending = await query(
+              `SELECT data, data_translated, language FROM conversations WHERE conversation_id = $1`,
+              [conversation.conversation_id]
+            );
+
+            const pendingData = resPending.rows[0]?.data || [];
+            const pendingDataTranslated = resPending.rows[0]?.data_translated || [];
+            const responseLanguage = resPending.rows[0]?.language || 'en';
+
+            // Nothing buffered (e.g. the Flow was the user's first interaction) — greet instead
+            if (pendingData.length === 0) {
+              pendingData.push({ role: "user", content: "Hello" });
+              pendingDataTranslated.push({ role: "user", content: "Hello" });
+            }
+
+            await runAiTurn(
+              conversation.conversation_id,
+              from,
+              botNumber,
+              responseLanguage,
+              pendingData,
+              pendingDataTranslated
+            );
+
+            // console.log("📋 Form response saved, interview started:", savedData);
+
+          } catch (err) {
+            console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
+          }
+
+        } else {
+          // Not a form response — nudge the user, and give up after prompts.flow_send_limit sends
+          const flowsSent = await countFlowsSent(conversation.conversation_id);
+
+          const resLang = await query(
+            `SELECT language FROM conversations WHERE conversation_id = $1`,
+            [conversation.conversation_id]
+          );
+          const responseLanguage = resLang.rows[0]?.language || 'en';
+
+          if (flowsSent >= prompts.flow_send_limit) {
+            let closingText = prompts.flow_abandoned_message;
+
+            if (responseLanguage !== 'en') {
+              closingText = await translateToSelectedLanguage(closingText, responseLanguage);
+            }
+
+            await sendText(conversation.conversation_id, from, closingText, botNumber);
+            await finishConversation(conversation.conversation_id);
+
+            console.log(`⚠️ Flow ignored after ${flowsSent} sends — conversation ended.`);
+          } else {
+            console.log(`🔁 Re-sending survey flow (${flowsSent} sent so far)`);
+
+            await sendSurveyFlow(
+              conversation.conversation_id,
+              from,
+              botNumber,
+              responseLanguage,
+              prompts.flow_nudge_message
+            );
+          }
+        }
+        break;
+
       case "unstructured":
+        // Free-form AI interview — the closing stage, the survey Flow is already done
 
         // console.log(`🟢 [unstructured] conversation ${conversation.conversation_id}`);
-
-        // const messageContent = incoming.text?.body || "[Non-text message]";
 
         const resPending = await query(
           `SELECT data, data_translated, language FROM conversations WHERE conversation_id = $1`,
@@ -481,35 +599,30 @@ app.post("/webhook", async (req, res) => {
         let saveData = [...pendingData]; // copy of conversation history
         let saveDataTranslated = [...pendingDataTranslated];
 
-        if (!isReturningUserFirstMessage) {
-          saveData.push({ role: "user", content: messageForAI });
-          saveDataTranslated.push({ role: "user", content: originalText });
-        }
-
-        // Add the new user message to both saveData and AI input
-        // saveData.push({ role: "user", content: translatedText });
-        // saveDataTranslated.push({ role: "user", content: originalText });
+        saveData.push({ role: "user", content: messageForAI });
+        saveDataTranslated.push({ role: "user", content: originalText });
 
         // Count user messages
         const userMessageCount = pendingData.filter(msg => msg.role === "user").length;
         console.log(`📝 User message count: ${userMessageCount}`);
 
         if (userMessageCount + 1 >= prompts.message_limt) {
-          
-          await sendFlow(
-            conversation.conversation_id,
-            from,
-            prompts.flow_params.flowId,
-            prompts.flow_params.flowCta,
-            "You've reached the message limit, please complete this form.",
-            botNumber,
-            "Powered by greenpages.app"
-          );
 
-          // Save conversation state + message limit
+          let limitText = prompts.interview_complete_message;
+
+          if (currentMessageLanguage && currentMessageLanguage !== 'en') {
+            limitText = await translateToSelectedLanguage(limitText, currentMessageLanguage);
+          }
+
+          await sendText(conversation.conversation_id, from, limitText, botNumber);
+
+          saveData.push({ role: "assistant", content: prompts.interview_complete_message });
+          saveDataTranslated.push({ role: "assistant", content: limitText });
+
+          // Close the conversation so cleanup.js picks it up
           await query(
-            `UPDATE conversations 
-            SET data = $1, data_translated = $2, updated_time = NOW(), state = 'structured', message_limit = $3 
+            `UPDATE conversations
+            SET data = $1, data_translated = $2, updated_time = NOW(), state = 'finish', expired_at = NOW(), message_limit = $3
             WHERE conversation_id = $4`,
             [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), userMessageCount + 1, conversation.conversation_id]
           );
@@ -549,32 +662,30 @@ app.post("/webhook", async (req, res) => {
             saveDataTranslated.push({ role: "assistant", content: messageText });
 
             await query(
-              `UPDATE conversations 
-              SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), message_limit = $4 
+              `UPDATE conversations
+              SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), message_limit = $4
               WHERE conversation_id = $5`,
               [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), currentMessageLanguage, userMessageCount + 1, conversation.conversation_id]
             );
 
           } else if (responseType === "location_request") {
-            
-            console.log("📍 AI requested location flow");
-            await sendFlow(
-              conversation.conversation_id,
-              from,
-              prompts.flow_params.flowId,
-              prompts.flow_params.flowCta,
-              messageText, 
-              botNumber,
-              "Powered by greenpages.app"
-            );
 
-            // Save special marker in history
-            saveData.push({ role: "assistant", content: "[Location Flow Sent]" });
-            saveDataTranslated.push({ role: "assistant", content: "[Location Flow Sent]" });
+            // 🏁 Interview finished — send the closing message and end the conversation
+            console.log("🏁 AI signalled the end of the interview");
+
+            if (currentMessageLanguage && currentMessageLanguage !== 'en') {
+              const translated = await translateToSelectedLanguage(messageText, currentMessageLanguage);
+              messageText = translated;
+            }
+
+            await sendText(conversation.conversation_id, from, messageText, botNumber);
+
+            saveData.push({ role: "assistant", content: aiResponse.text });
+            saveDataTranslated.push({ role: "assistant", content: messageText });
 
             await query(
-              `UPDATE conversations 
-              SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), state = 'structured', message_limit = $4 
+              `UPDATE conversations
+              SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), state = 'finish', expired_at = NOW(), message_limit = $4
               WHERE conversation_id = $5`,
               [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), currentMessageLanguage, userMessageCount + 1, conversation.conversation_id]
             );
@@ -584,65 +695,6 @@ app.post("/webhook", async (req, res) => {
         }
 
         break;
-
-      case "structured":
-        // console.log(`🟡 [structured] conversation ${conversation.conversation_id}`);
-
-        if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
-          const nfm = incoming.interactive.nfm_reply;
-
-          try {
-            const responseData = JSON.parse(nfm.response_json);
-
-            // Remove flow_token from response
-            const { flow_token, ...savedData } = responseData;
-
-            // Save the form response in first_message
-            await query(
-              `UPDATE conversations 
-              SET first_message = $1, updated_time = NOW(), state = 'finish', expired_at = NOW()
-              WHERE conversation_id = $2`,
-              [JSON.stringify(savedData), conversation.conversation_id]
-            );
-
-            const botNumber = value?.metadata?.display_phone_number;
-
-            // Thank the user
-            await sendText(
-              conversation.conversation_id,
-              from,
-              "✅ Thank you for submitting your impediment. You may submit another one at any time if needed.",
-              botNumber
-            );
-
-            // console.log("📋 Form response saved and conversation finished:", savedData);
-
-          } catch (err) {
-            console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
-          }
-
-        } else {
-          // Not a valid form response — send fallback message and end
-          const botNumber = value?.metadata?.display_phone_number;
-
-          await sendText(
-            conversation.conversation_id,
-            from,
-            "⚠️ Sorry, I didn’t understand your response. The process has been closed. You can start again anytime if you’d like to submit another impediment. Thanks.",
-            botNumber
-          );
-
-          await query(
-            `UPDATE conversations 
-            SET state = 'finish', updated_time = NOW(), expired_at = NOW() 
-            WHERE conversation_id = $1`,
-            [conversation.conversation_id]
-          );
-
-          // console.log("⚠️ Non-form response received — conversation ended.");
-        }
-        break;
-        
 
       case "finish":
         // Nothing happens
