@@ -23,6 +23,9 @@ By continuing this conversation, you confirm that you are over 18 years of age, 
   // Sent with the Flow immediately after the terms are accepted, before the AI interview
   flow_intro_message: `Thank you for accepting the terms. Before we chat, please answer a few quick questions about your business by tapping the button below.`,
 
+  // Prefixed to the first AI reply once the survey Flow has been submitted
+  form_ack_message: `Thanks, I've received your form responses.`,
+
   // Sent when the user replies with a normal message instead of completing the Flow
   flow_nudge_message: `Please tap the button below and complete the short form so that we can continue.`,
 
@@ -31,6 +34,9 @@ By continuing this conversation, you confirm that you are over 18 years of age, 
 
   // Sent when the interview reaches the message limit
   interview_complete_message: `Thank you for sharing your experience. You've reached the end of this conversation — your input will help identify policy and regulatory barriers to investment in South Africa.`,
+
+  // Appended to whichever message closes the interview, so the user knows they can come back
+  closing_invitation: `You can submit another response anytime, just send us a message.`,
 
   // How many times the Flow may be sent before the conversation is closed
   flow_send_limit: 3,
@@ -95,7 +101,11 @@ If you are in an emergency situation, contact:
   Each of your responses must adhere to a structured JSON format compliant with RFC8259:
   {"text": "Your message here", "type": "location_request" or "-"}
   The "text" field contains my message directed to the user, and the "type" field specifies whether this is your final, closing message. Use "-" while the conversation is ongoing and "location_request" on your last message only.
-  {"text": "Thank you for your input. Your feedback has been recorded and will help us understand the context of the investment barrier.", "type": "location_request"}
+  {"text": "<your own closing message, written fresh for this conversation>", "type": "location_request"}
+
+  The examples in this prompt illustrate the JSON structure only. Never copy their wording.
+  Every "text" value must be written by you for the conversation in front of you and must refer
+  to what this user actually told you.
 
   ### PROGRESSION LOGIC ###
   When the user has provided sufficient information about the barrier to investment, thank them for their assistance and label the message type 'location_request'.

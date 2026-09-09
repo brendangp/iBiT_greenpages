@@ -24,7 +24,8 @@ async function getOrCreateConversation(phoneNumber) {
   if (userTerms.rows.length === 0) {
     await query(
       `INSERT INTO user_terms (phone_number, terms_accepted, created_at, expired_at)
-      VALUES ($1, false, NOW(), NOW() + INTERVAL '24 hours')`,
+      VALUES ($1, false, NOW(), NOW() + INTERVAL '24 hours')
+      ON CONFLICT DO NOTHING`,
       [phoneNumber]
     );
   }
@@ -51,7 +52,37 @@ async function getOrCreateConversation(phoneNumber) {
 }
 
 /* ---------------- Messages ---------------- */
-async function logInboundMessage(conversationId, message, botNumber = null) {
+// Claims an inbound message by its wamid before anything with side effects runs. Meta can
+// deliver the same webhook more than once; whichever call inserts the row first owns the
+// message and the duplicate bails out.
+async function claimInboundMessage(message, botNumber = null) {
+  const res = await query(
+    `INSERT INTO messages (wamid, direction, from_number, to_number, type, created_time)
+     VALUES ($1, 'inbound', $2, $3, $4, NOW())
+     ON CONFLICT DO NOTHING
+     RETURNING message_id`,
+    [
+      message.id,
+      message.from,
+      botNumber || process.env.BOT_PHONE_NUMBER || "unknown",
+      message.type
+    ]
+  );
+  return res.rows[0]?.message_id || null;
+}
+
+// Drops the claim again if processing failed, so a Meta retry is handled instead of being
+// mistaken for a duplicate.
+async function releaseInboundClaim(messageId) {
+  if (!messageId) return;
+  try {
+    await query(`DELETE FROM messages WHERE message_id = $1`, [messageId]);
+  } catch (err) {
+    console.error("❌ Failed to release inbound claim:", err.message);
+  }
+}
+
+async function logInboundMessage(messageId, conversationId, message, botNumber = null) {
   const wamid = message.id;
   const fromNumber = message.from;
   const toNumber = botNumber || process.env.BOT_PHONE_NUMBER || "unknown";
@@ -72,11 +103,12 @@ async function logInboundMessage(conversationId, message, botNumber = null) {
     else if (message.interactive?.button_reply) body = message.interactive.button_reply?.title;
   }
 
+  // The row already exists from claimInboundMessage — fill in what we now know
   await query(
-    `INSERT INTO messages
-       (conversation_id, wamid, direction, from_number, to_number, type, body, created_time)
-     VALUES ($1, $2, 'inbound', $3, $4, $5, $6, NOW())`,
-    [conversationId, wamid, fromNumber, toNumber, type, body]
+    `UPDATE messages
+     SET conversation_id = $1, type = $2, body = $3, to_number = $4
+     WHERE message_id = $5`,
+    [conversationId, type, body, toNumber, messageId]
   );
 
   return { wamid, body };
@@ -182,10 +214,37 @@ async function finishConversation(conversationId) {
   );
 }
 
+/* ---------------- Closing ---------------- */
+// Appends the closing invitation, sends the final message and closes the conversation so
+// cleanup.js picks it up. Shared by every ending so the endings cannot drift apart again.
+async function finishWithClosing(conversationId, to, botNumber, language, englishText, saveData, saveDataTranslated, userMessageCount) {
+  const englishFull = englishText + "\n\n" + prompts.closing_invitation;
+
+  let messageText = englishFull;
+  if (language && language !== "en") {
+    messageText = await translateToSelectedLanguage(englishFull, language);
+  }
+
+  await sendText(conversationId, to, messageText, botNumber);
+
+  saveData.push({ role: "assistant", content: englishFull });
+  saveDataTranslated.push({ role: "assistant", content: messageText });
+
+  await query(
+    `UPDATE conversations
+     SET data = $1, data_translated = $2, language = $3, updated_time = NOW(),
+         state = 'finish', expired_at = NOW(), message_limit = $4
+     WHERE conversation_id = $5`,
+    [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), language, userMessageCount, conversationId]
+  );
+
+  console.log(`🏁 Conversation ${conversationId} closed`);
+}
+
 /* ---------------- AI turn ---------------- */
 // Run the model over the stored history, send the reply and persist it.
 // Used for the first AI reply, once the survey Flow has been submitted.
-async function runAiTurn(conversationId, to, botNumber, language, pendingData, pendingDataTranslated) {
+async function runAiTurn(conversationId, to, botNumber, language, pendingData, pendingDataTranslated, ackPrefix = null) {
   const saveData = [...pendingData];
   const saveDataTranslated = [...pendingDataTranslated];
 
@@ -195,17 +254,34 @@ async function runAiTurn(conversationId, to, botNumber, language, pendingData, p
   const aiResponse = await getResponses(aiInput);
   if (!aiResponse) return;
 
-  let messageText = aiResponse.text;
+  const responseType = aiResponse.type || "-";
+  let englishText = aiResponse.text;
+
+  // Acknowledge the survey Flow in the same message as the first AI reply
+  if (ackPrefix) {
+    englishText = ackPrefix + "\n\n" + englishText;
+  }
+
+  // The model can signal the end of the interview on this very first turn — close the
+  // conversation properly instead of dropping the signal.
+  if (responseType === "location_request") {
+    console.log("🏁 AI signalled the end of the interview on the first turn");
+    const userMessageCount = saveData.filter(msg => msg.role === "user").length;
+    await finishWithClosing(conversationId, to, botNumber, language, englishText, saveData, saveDataTranslated, userMessageCount);
+    return;
+  }
+
+  let messageText = englishText;
   console.log("AI Response before translation:", messageText);
 
   if (language && language !== "en") {
-    messageText = await translateToSelectedLanguage(messageText, language);
+    messageText = await translateToSelectedLanguage(englishText, language);
   }
 
   console.log("🤖 AI Response:", messageText);
   await sendText(conversationId, to, messageText, botNumber);
 
-  saveData.push({ role: "assistant", content: aiResponse.text });
+  saveData.push({ role: "assistant", content: englishText });
   saveDataTranslated.push({ role: "assistant", content: messageText });
 
   await query(
@@ -231,6 +307,9 @@ app.get("/webhook", (req, res) => {
 app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 
+  // Tracks the claimed inbound message so the claim can be released if processing fails
+  let inboundMessageId = null;
+
   try {
     const value = req.body?.entry?.[0]?.changes?.[0]?.value;
 
@@ -247,7 +326,16 @@ app.post("/webhook", async (req, res) => {
     if (!incoming) return;
 
     const from = incoming.from;
+    const botNumber = value?.metadata?.display_phone_number;
     console.log("📩 Incoming message from number:", from);
+
+    // Claim the message before anything with side effects runs. Meta re-delivers webhooks, and
+    // two concurrent deliveries previously created duplicate conversations and duplicate replies.
+    inboundMessageId = await claimInboundMessage(incoming, botNumber);
+    if (!inboundMessageId) {
+      console.log("🔁 Duplicate webhook delivery ignored:", incoming.id);
+      return;
+    }
 
     // Check for voice note
     if (incoming.type === "audio" && incoming.audio?.id) {
@@ -261,7 +349,7 @@ app.post("/webhook", async (req, res) => {
 
         // Send polite message back to user
         await sendText(
-          conversation.conversation_id,
+          null,
           from, 
           "Sorry, I was unable to understand what you were saying just now. Please type it out.",
           botNumber
@@ -276,7 +364,6 @@ app.post("/webhook", async (req, res) => {
     const conversation = await getOrCreateConversation(from);
 
     // --- Log inbound message ---
-    const botNumber = value?.metadata?.display_phone_number;
 
     // Handle translation
     let detectedLanguage = null;
@@ -308,7 +395,7 @@ app.post("/webhook", async (req, res) => {
       useEnglish: ${shouldUseEnglish}`);
 
     // Save incomming message
-    const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
+    const { wamid, body } = await logInboundMessage(inboundMessageId, conversation.conversation_id, incoming, botNumber);
     await markMessageAsRead(wamid);
 
     // --- If a quit keyword (QUIT / STOP) is typed at any stage, perform the following ---
@@ -532,7 +619,8 @@ app.post("/webhook", async (req, res) => {
               botNumber,
               responseLanguage,
               pendingData,
-              pendingDataTranslated
+              pendingDataTranslated,
+              prompts.form_ack_message
             );
 
             // console.log("📋 Form response saved, interview started:", savedData);
@@ -605,23 +693,15 @@ app.post("/webhook", async (req, res) => {
 
         if (userMessageCount + 1 >= prompts.message_limt) {
 
-          let limitText = prompts.interview_complete_message;
-
-          if (currentMessageLanguage && currentMessageLanguage !== 'en') {
-            limitText = await translateToSelectedLanguage(limitText, currentMessageLanguage);
-          }
-
-          await sendText(conversation.conversation_id, from, limitText, botNumber);
-
-          saveData.push({ role: "assistant", content: prompts.interview_complete_message });
-          saveDataTranslated.push({ role: "assistant", content: limitText });
-
-          // Close the conversation so cleanup.js picks it up
-          await query(
-            `UPDATE conversations
-            SET data = $1, data_translated = $2, updated_time = NOW(), state = 'finish', expired_at = NOW(), message_limit = $3
-            WHERE conversation_id = $4`,
-            [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), userMessageCount + 1, conversation.conversation_id]
+          await finishWithClosing(
+            conversation.conversation_id,
+            from,
+            botNumber,
+            currentMessageLanguage,
+            prompts.interview_complete_message,
+            saveData,
+            saveDataTranslated,
+            userMessageCount + 1
           );
 
           break; // ⛔ stop further AI processing
@@ -670,21 +750,15 @@ app.post("/webhook", async (req, res) => {
             // 🏁 Interview finished — send the closing message and end the conversation
             console.log("🏁 AI signalled the end of the interview");
 
-            if (currentMessageLanguage && currentMessageLanguage !== 'en') {
-              const translated = await translateToSelectedLanguage(messageText, currentMessageLanguage);
-              messageText = translated;
-            }
-
-            await sendText(conversation.conversation_id, from, messageText, botNumber);
-
-            saveData.push({ role: "assistant", content: aiResponse.text });
-            saveDataTranslated.push({ role: "assistant", content: messageText });
-
-            await query(
-              `UPDATE conversations
-              SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), state = 'finish', expired_at = NOW(), message_limit = $4
-              WHERE conversation_id = $5`,
-              [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), currentMessageLanguage, userMessageCount + 1, conversation.conversation_id]
+            await finishWithClosing(
+              conversation.conversation_id,
+              from,
+              botNumber,
+              currentMessageLanguage,
+              aiResponse.text,
+              saveData,
+              saveDataTranslated,
+              userMessageCount + 1
             );
           } else {
             console.warn("⚠️ Unknown AI response type:", responseType);
@@ -709,6 +783,8 @@ app.post("/webhook", async (req, res) => {
     // }
   } catch (err) {
     console.error("Webhook error:", err.response?.data || err.message);
+    // Release the claim so Meta's retry is processed instead of being ignored as a duplicate
+    await releaseInboundClaim(inboundMessageId);
   }
 });
 
