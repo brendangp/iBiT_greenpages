@@ -122,6 +122,25 @@ async function saveUserTerms(phoneNumber, accepted) {
   );
 }
 
+// Hard-deletes everything we hold on a user: their terms record, every message
+// on the conversation, and the conversation row itself.
+async function deleteUserData(phoneNumber, conversationId) {
+  await query(
+    `DELETE FROM user_terms WHERE phone_number = $1`,
+    [phoneNumber]
+  );
+
+  await query(
+    `DELETE FROM messages WHERE conversation_id = $1`,
+    [conversationId]
+  );
+
+  await query(
+    `DELETE FROM conversations WHERE conversation_id = $1`,
+    [conversationId]
+  );
+}
+
 
 /* ---------------- Survey Flow ---------------- */
 // Sent once the terms are accepted, before the AI interview, and re-sent as a nudge
@@ -292,8 +311,12 @@ app.post("/webhook", async (req, res) => {
     const { wamid, body } = await logInboundMessage(conversation.conversation_id, incoming, botNumber);
     await markMessageAsRead(wamid);
 
-    // --- If Quit is typed at any stage, perform the following ---
-    if ( incoming.type === "text" && body && body.trim().toLowerCase() === "quit") {
+    // --- If a quit keyword (QUIT / STOP) is typed at any stage, perform the following ---
+    if (
+      incoming.type === "text" &&
+      body &&
+      prompts.quit_keywords.includes(body.trim().toLowerCase())
+    ) {
       // Have to send text first to stop errors
       await sendText(
         conversation.conversation_id,
@@ -303,20 +326,7 @@ app.post("/webhook", async (req, res) => {
       );
 
       // Delete data
-      await query(
-        `DELETE FROM user_terms WHERE phone_number = $1`,
-        [from]
-      );
-
-      await query(
-        `DELETE FROM messages WHERE conversation_id = $1`,
-        [conversation.conversation_id]
-      );
-
-      await query(
-        `DELETE FROM conversations WHERE conversation_id = $1`,
-        [conversation.conversation_id]
-      );
+      await deleteUserData(from, conversation.conversation_id);
 
       return;
     }
@@ -435,21 +445,8 @@ app.post("/webhook", async (req, res) => {
             await sendText(conversation.conversation_id, from, prompts.quit_response, botNumber);
 
             // Delete data
-            await query(
-              `DELETE FROM user_terms WHERE phone_number = $1`,
-              [from]
-            );
+            await deleteUserData(from, conversation.conversation_id);
 
-            await query(
-              `DELETE FROM messages WHERE conversation_id = $1`,
-              [conversation.conversation_id]
-            );
-
-            await query(
-              `DELETE FROM conversations WHERE conversation_id = $1`,
-              [conversation.conversation_id]
-            );
-            
             return;
           }
         }
