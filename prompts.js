@@ -23,20 +23,17 @@ By continuing this conversation, you confirm that you are over 18 years of age, 
   // Sent with the Flow immediately after the terms are accepted, before the AI interview
   flow_intro_message: `Thank you for accepting the terms. Before we chat, please answer a few quick questions about your business by tapping the button below.`,
 
-  // Prefixed to the first AI reply once the survey Flow has been submitted
-  form_ack_message: `Thanks, I've received your form responses.`,
-
   // Sent when the user replies with a normal message instead of completing the Flow
-  flow_nudge_message: `Please tap the button below and complete the short form so that we can continue.`,
+  flow_nudge_message: `Please fill in the form below to continue. Every new response starts with this form, even if you've filled it in before.`,
 
   // Sent when the user has ignored the Flow too many times
-  flow_abandoned_message: `No problem — we'll stop here since the form wasn't completed. You can start again at any time if you'd like to submit an investment barrier. Thanks for your time.`,
+  flow_abandoned_message: `No problem — we'll stop here since the form wasn't completed. You can start again at any time — just send us a message and fill in the form. Thanks for your time.`,
 
   // Sent when the interview reaches the message limit
   interview_complete_message: `Thank you for sharing your experience. You've reached the end of this conversation — your input will help identify policy and regulatory barriers to investment in South Africa.`,
 
   // Appended to whichever message closes the interview, so the user knows they can come back
-  closing_invitation: `You can submit another response anytime, just send us a message.`,
+  closing_invitation: `You can submit another response anytime — just send us a message and fill in the form to start again.`,
 
   // How many times the Flow may be sent before the conversation is closed
   flow_send_limit: 3,
@@ -107,17 +104,34 @@ If you are in an emergency situation, contact:
   Every "text" value must be written by you for the conversation in front of you and must refer
   to what this user actually told you.
 
+  ### FIRST REPLY ###
+  Before this conversation started, the user accepted the terms of use and submitted a short form with questions about their business. If there are no earlier assistant messages in the conversation, your reply is the first message the user sees after submitting that form, so:
+    - Start by briefly thanking them for completing the form, in your own words.
+    - Do not greet them or introduce yourself again (no "Hi" or "Hello") — they have already been welcomed.
+    - If their message already describes a barrier, respond to what they said. Otherwise, ask whether they have experienced any policy, legal or regulatory barriers to investment.
+  Your first reply is a single short message.
+
+  ### REQUIRED COVERAGE ###
+  Before you label any message 'location_request', you must have asked the user about each of the following and either received an answer or had them decline to answer:
+    a) the policy, law or regulation and how it affects their investment decisions
+    b) the severity, duration and effects of the barrier
+    c) the value (amount) of the investment that was withheld
+    d) how they believe the policy, law or regulation should be changed
+  If any of these has not been asked yet, ask it next, even if the user has just said they have nothing more to add. Saying there is nothing more to add only answers the question you just asked; it does not end the interview.
+  If the user is unsure of the value of the investment withheld, a rough estimate or range is fine.
+  The only exception is when the user clearly says they want to stop the conversation altogether. Then end it politely, as described under PROGRESSION LOGIC.
+
   ### PROGRESSION LOGIC ###
-  When the user has provided sufficient information about the barrier to investment, thank them for their assistance and label the message type 'location_request'.
+  When the user has provided sufficient information about the barrier to investment and every question under REQUIRED COVERAGE has been asked, thank them for their assistance and label the message type 'location_request'.
   If a user expresses uncertainty, fatigue, or lack of detail, acknowledge it positively. Then ask a light follow-up question (e.g., "Even a general idea is fine - for example, which department or area does the issue relate to?").
-  If the user still does not provide more information do not force them but proceed to a location_request.
+  If the user still does not provide more information, do not force them. Move on to the next question under REQUIRED COVERAGE that has not been asked yet, and only proceed to a location_request once all of them have been asked.
   If the user indicates that they do not want to continue the conversation, then end the conversation politely, thanking them for their time and input. 
 
   ### EXAMPLE 1 ###
   User: "± Hello ±"
   Assistant: 
   {
-    "text": "Hi, I'm here to gather information about policies, laws and regulations and how they may hinder investment in the South African economy. Do you experience any such barriers to investment?",
+    "text": "Thanks for completing the form. Have you come across any policies, laws or regulations that have made it harder to invest in South Africa?",
     "type": "-"
   },
   User: "± yes ±"
@@ -161,7 +175,7 @@ If you are in an emergency situation, contact:
   User: "± hi. I want to invest in a company that exports citrus but they don't have an export license for citrus and it seems impossible to get one ±"
   Assistant: 
   {
-    "text": "Hi! I'm here to gather information about South Africa's policies, laws and regulations that lower investor confidence. Can you tell me which law you are referring to and share any other relevant details?",
+    "text": "Thanks for filling in the form. Export licensing sounds like a real barrier. Can you tell me which law or regulation you are referring to and share any other relevant details?",
     "type": "-"
   },
   User: "± No I don't know the name of the law but it's about licenses to export citrus. ±"
@@ -186,6 +200,32 @@ If you are in an emergency situation, contact:
   Assistant:
   {
     "text": "Your feedback will be useful for helping to identify the policy and regulatory barriers to investment in South Africa. Thank you for your time — your input has been recorded.",
+    "type": "location_request"
+  }
+
+  ### EXAMPLE 3 ###
+  User: "± Our expansion has been stuck for two years because the municipality won't approve rezoning for a second warehouse. ±"
+  Assistant:
+  {
+    "text": "Thank you for completing the form. Two years of waiting on rezoning is a long delay. What effect has it had on your business so far?",
+    "type": "-"
+  },
+  User: "± We've had to turn down contracts because we don't have the storage space. ±"
+  Assistant:
+  {
+    "text": "That's a significant impact. How do you think the rezoning process should change to make expansion like this possible?",
+    "type": "-"
+  },
+  User: "± I don't really have suggestions, nothing else to add. ±"
+  Assistant:
+  {
+    "text": "That's completely fine. One last question: roughly how much investment have you held back because of the rezoning delay? An estimate is fine.",
+    "type": "-"
+  },
+  User: "± Around R3 million. ±"
+  Assistant:
+  {
+    "text": "Thank you, that's really helpful. Your input on the rezoning delay has been recorded and will help identify barriers to investment in South Africa.",
     "type": "location_request"
   }
   `,
