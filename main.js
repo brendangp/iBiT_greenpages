@@ -244,23 +244,23 @@ async function finishWithClosing(conversationId, to, botNumber, language, englis
 /* ---------------- AI turn ---------------- */
 // Run the model over the stored history, send the reply and persist it.
 // Used for the first AI reply, once the survey Flow has been submitted.
-async function runAiTurn(conversationId, to, botNumber, language, pendingData, pendingDataTranslated, ackPrefix = null) {
+async function runAiTurn(conversationId, to, botNumber, language, pendingData, pendingDataTranslated) {
   const saveData = [...pendingData];
   const saveDataTranslated = [...pendingDataTranslated];
 
-  // The system prompt is never persisted — it is appended only when building the request
-  const aiInput = [...pendingData, { role: "system", content: prompts.system_prompt }];
+  // The system prompt is never persisted — it is appended only when building the request.
+  // User turns are wrapped in ± markers, the input delimiter the prompt expects.
+  const aiInput = [
+    ...pendingData.map(msg => (msg.role === "user" ? { ...msg, content: `± ${msg.content} ±` } : msg)),
+    { role: "system", content: prompts.system_prompt }
+  ];
 
   const aiResponse = await getResponses(aiInput);
   if (!aiResponse) return;
 
   const responseType = aiResponse.type || "-";
-  let englishText = aiResponse.text;
-
-  // Acknowledge the survey Flow in the same message as the first AI reply
-  if (ackPrefix) {
-    englishText = ackPrefix + "\n\n" + englishText;
-  }
+  // The system prompt's FIRST REPLY section has the model acknowledge the survey Flow itself
+  const englishText = aiResponse.text;
 
   // The model can signal the end of the interview on this very first turn — close the
   // conversation properly instead of dropping the signal.
@@ -619,8 +619,7 @@ app.post("/webhook", async (req, res) => {
               botNumber,
               responseLanguage,
               pendingData,
-              pendingDataTranslated,
-              prompts.form_ack_message
+              pendingDataTranslated
             );
 
             // console.log("📋 Form response saved, interview started:", savedData);
