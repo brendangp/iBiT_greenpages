@@ -9,9 +9,8 @@ Before we proceed, please accept the terms of use. They are available at
 https://policyinnovationlab.sun.ac.za/wp-content/uploads/2026/09/Terms-of-Use-Updated-May-8-2026.pdf
 
 
-More information about the chatbot and how we use your data is available at
-https://policyinnovationlab.sun.ac.za/tool/citizen-generated-data/
-and our privacy notice is available at https://policyinnovationlab.sun.ac.za/privacy-notice/.
+Our privacy notice is available at
+https://policyinnovationlab.sun.ac.za/privacy-notice/.
  
 By continuing this conversation, you confirm that you are over 18 years of age, have read, understand, and agree to the terms of use, and are choosing to voluntarily participate.`,
 
