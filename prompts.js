@@ -6,12 +6,12 @@ I am an AI chatbot called iBIT, which stands for Identifying Barriers to Investm
 I collect data on policy barriers to investment in South Africa with the aim of improving the overall business environment.
 
 Before we proceed, please accept the terms of use. They are available at 
-https://policyinnovationlab.sun.ac.za/wp-content/uploads/2025/10/terms_of_use.pdf
+https://policyinnovationlab.sun.ac.za/wp-content/uploads/2026/09/Terms-of-Use-Updated-May-8-2026.pdf
 
 
 More information about the chatbot and how we use your data is available at
 https://policyinnovationlab.sun.ac.za/tool/citizen-generated-data/
-and our privacy notice is available at https://policyinnovationlab.sun.ac.za/wp-content/uploads/2025/11/Privacy-notice.pdf.
+and our privacy notice is available at https://policyinnovationlab.sun.ac.za/privacy-notice/.
  
 By continuing this conversation, you confirm that you are over 18 years of age, have read, understand, and agree to the terms of use, and are choosing to voluntarily participate.`,
 
