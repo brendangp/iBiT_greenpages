@@ -30,26 +30,49 @@ function createClient() {
 
 const client = createClient();
 
+// Lowercase, drop punctuation/emoji and collapse repeated letters: "Hellooo!" → "helo"
+function normalizeWord(word) {
+  return word.toLowerCase().replace(/[^\p{L}]/gu, '').replace(/(\p{L})\1+/gu, '$1');
+}
+
+// True when a and b differ by at most one inserted, deleted or substituted letter
+function withinOneEdit(a, b) {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++edits > 1) return false;
+    if (a.length > b.length) i++;
+    else if (a.length < b.length) j++;
+    else { i++; j++; }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
+
+const NORMALIZED_GREETINGS = SHORT_GREETING_CATCHES.map(normalizeWord);
+
+function isGreetingWord(word) {
+  const w = normalizeWord(word);
+  if (!w) return false;
+  if (NORMALIZED_GREETINGS.includes(w)) return true;
+  // Typo tolerance ("hellow", "helo", "morming") — only for longer words, so short
+  // words in other languages don't get caught
+  return w.length >= 4 && NORMALIZED_GREETINGS.some(g => g.length >= 4 && withinOneEdit(w, g));
+}
+
 /**
  * Check if text is too short or matches common greetings
  */
 function isShortOrCommonGreeting(text) {
   if (!text) return true;
-  
-  const normalized = text.toLowerCase().trim();
-  const wordCount = normalized.split(/\s+/).length;
-  
-  // Check if it's 1-2 words
-  if (wordCount <= 2) {
-    // Check if it matches any common greeting
-    const words = normalized.split(/\s+/);
-    for (const word of words) {
-      if (SHORT_GREETING_CATCHES.includes(word)) {
-        return true;
-      }
-    }
+
+  const words = text.trim().split(/\s+/).filter(w => normalizeWord(w));
+
+  // Check if it's 1-2 words and any of them is a (possibly misspelt) common greeting
+  if (words.length > 0 && words.length <= 2) {
+    return words.some(isGreetingWord);
   }
-  
+
   return false;
 }
 

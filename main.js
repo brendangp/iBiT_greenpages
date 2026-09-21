@@ -14,10 +14,20 @@ app.use(express.json());
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 /* ---------------- Conversations ---------------- */
+// Called once per inbound message. Everything we hold on a user lives on a sliding 24h window
+// from their last message (matching WhatsApp's customer-service window): each message pushes
+// expired_at out again, and cleanup.js removes whatever has gone quiet for 24h.
 async function getOrCreateConversation(phoneNumber) {
-  // 1️⃣ Ensure user_terms entry exists
+  // 1️⃣ Ensure user_terms entry exists and slide its window. A record that has already
+  // expired (cleanup.js runs on a schedule, so it can still be here) starts over — the
+  // terms have to be accepted again.
   const userTerms = await query(
-    `SELECT id FROM user_terms WHERE phone_number = $1 LIMIT 1`,
+    `UPDATE user_terms
+     SET terms_accepted = CASE WHEN expired_at <= NOW() THEN false ELSE terms_accepted END,
+         expired_at = NOW() + INTERVAL '24 hours',
+         updated_at = NOW()
+     WHERE phone_number = $1
+     RETURNING id`,
     [phoneNumber]
   );
 
@@ -32,23 +42,33 @@ async function getOrCreateConversation(phoneNumber) {
 
   // 2️⃣ Get or create conversation
   const res = await query(
-    `SELECT * FROM conversations 
-     WHERE phone_number = $1 
+    `SELECT *, COALESCE(expired_at <= NOW(), false) AS is_expired FROM conversations
+     WHERE phone_number = $1
      ORDER BY started_at DESC LIMIT 1`,
     [phoneNumber]
   );
 
   const existing = res.rows[0];
 
-  if (!existing || existing.state === "finish") {
+  // An expired conversation is over even if cleanup.js hasn't collected it yet — start afresh
+  // and leave the old row for cleanup.
+  if (!existing || existing.state === "finish" || existing.is_expired) {
     const insert = await query(
-      `INSERT INTO conversations (phone_number, state) 
-       VALUES ($1, 'active') RETURNING *`,
+      `INSERT INTO conversations (phone_number, state, expired_at)
+       VALUES ($1, 'active', NOW() + INTERVAL '24 hours') RETURNING *`,
       [phoneNumber]
     );
     return insert.rows[0];
   }
-  return existing;
+
+  const bumped = await query(
+    `UPDATE conversations
+     SET expired_at = NOW() + INTERVAL '24 hours'
+     WHERE conversation_id = $1
+     RETURNING *`,
+    [existing.conversation_id]
+  );
+  return bumped.rows[0];
 }
 
 /* ---------------- Messages ---------------- */
@@ -358,10 +378,10 @@ app.post("/webhook", async (req, res) => {
       }
     }
 
-    // --- Check if user has accepted Terms ---
-    const userTerms = await checkUserTerms(from);
-    // --- Ensure conversation exists ---
+    // --- Ensure conversation exists (also slides the 24h window) ---
     const conversation = await getOrCreateConversation(from);
+    // --- Check if user has accepted Terms (after the window slide, which may reset them) ---
+    const userTerms = await checkUserTerms(from);
 
     // --- Log inbound message ---
 
@@ -632,11 +652,23 @@ app.post("/webhook", async (req, res) => {
           // Not a form response — nudge the user, and give up after prompts.flow_send_limit sends
           const flowsSent = await countFlowsSent(conversation.conversation_id);
 
-          const resLang = await query(
-            `SELECT language FROM conversations WHERE conversation_id = $1`,
-            [conversation.conversation_id]
-          );
-          const responseLanguage = resLang.rows[0]?.language || 'en';
+          // Reply in the language of this message, not the one the conversation opened with —
+          // a misdetected first message (e.g. "hellow" → Tagalog) must not lock the language.
+          // Store it too, so the first AI turn after the Flow uses the latest language.
+          let responseLanguage;
+          if (incoming.type === "text" && originalText) {
+            responseLanguage = shouldUseEnglish ? 'en' : (detectedLanguage || 'en');
+            await query(
+              `UPDATE conversations SET language = $1, updated_time = NOW() WHERE conversation_id = $2`,
+              [responseLanguage, conversation.conversation_id]
+            );
+          } else {
+            const resLang = await query(
+              `SELECT language FROM conversations WHERE conversation_id = $1`,
+              [conversation.conversation_id]
+            );
+            responseLanguage = resLang.rows[0]?.language || 'en';
+          }
 
           if (flowsSent >= prompts.flow_send_limit) {
             let closingText = prompts.flow_abandoned_message;

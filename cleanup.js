@@ -223,6 +223,9 @@ function sanitizeConversation(conversationData) {
 
 
 // --- Main Cleanup Function ---
+// Everything in the short-term DB lives on a sliding 24h window from the user's last message
+// (main.js pushes expired_at out on every inbound message), so each table is handled on its
+// own expiry — an expired user_terms row never takes a live conversation down with it.
 async function cleanup() {
 
     // Check cron IP address
@@ -231,92 +234,63 @@ async function cleanup() {
     //     console.log(res.data);
     // })();
 
+  let migrated = 0, deleted = 0, failed = 0;
 
   try {
-    // 1️⃣ Process expired user_terms
-    const { rows: expiredTerms } = await query(`
-      SELECT * FROM user_terms WHERE expired_at <= NOW()
+    // 1️⃣ Expired user_terms — just the record; conversations expire on their own
+    const { rowCount: expiredTerms } = await query(`
+      DELETE FROM user_terms WHERE expired_at <= NOW()
     `);
 
-    for (const term of expiredTerms) {
-      // Find associated conversations
-      const { rows: conversations } = await query(`
-        SELECT * FROM conversations WHERE phone_number = $1
-      `, [term.phone_number]);
-
-      for (const conv of conversations) {
-
-        //console.log("Trying to read from user_terms")
-
-        // Parse first_message for structured data
-        const { sector, size, investor_origin, location_details } = parseFirstMessage(conv.first_message);
-
-        // Sanitize conversation data (remove PII)
-        const sanitizedData = sanitizeConversation(conv.data);
-        const sanitizedDataTranslated = sanitizeConversation(conv.data_translated);
-
-        // Prepare long-term data
-        const user_id = hashPhoneNumber(conv.phone_number);
-        const location = location_details;
-        const date = getMonday(conv.started_at);
-        const conversation = JSON.stringify(sanitizedData);
-        const original_conversation = JSON.stringify(sanitizedDataTranslated);
-
-        // Insert into long-term DB
-        await longTermQuery(`
-          INSERT INTO survey_responses
-          (user_id, location, date, conversation, original_conversation, sector, size, investor_origin)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        `, [user_id, location, date, conversation, original_conversation, sector, size, investor_origin]);
-
-        // Delete messages
-        await query(`DELETE FROM messages WHERE conversation_id = $1`, [conv.conversation_id]);
-
-        // Delete conversation
-        await query(`DELETE FROM conversations WHERE conversation_id = $1`, [conv.conversation_id]);
-      }
-
-      // Delete user_term
-      await query(`DELETE FROM user_terms WHERE id = $1`, [term.id]);
-    }
-
-    // 2️⃣ Process expired conversations (not already handled)
+    // 2️⃣ Expired conversations
     const { rows: expiredConvs } = await query(`
       SELECT * FROM conversations WHERE expired_at <= NOW()
     `);
 
     for (const conv of expiredConvs) {
+      // One bad row must not stop the rest of the run
+      try {
+        // Only conversations with consent and survey data are research data. A user who never
+        // accepted the terms did not consent, and one who never submitted the Flow gave us
+        // nothing usable — both are deleted without being migrated.
+        const shouldMigrate = conv.terms_accepted === true && conv.first_message != null;
 
-        //console.log("Trying to read from conversations")
+        if (shouldMigrate) {
+          // Parse first_message for structured data
+          const { sector, size, investor_origin, location_details } = parseFirstMessage(conv.first_message);
 
-        // Parse first_message for structured data
-        const { sector, size, investor_origin, location_details } = parseFirstMessage(conv.first_message);
+          // Sanitize conversation data (remove PII)
+          const sanitizedData = sanitizeConversation(conv.data);
+          const sanitizedDataTranslated = sanitizeConversation(conv.data_translated);
 
-        // Sanitize conversation data (remove PII)
-        const sanitizedData = sanitizeConversation(conv.data);
-        const sanitizedDataTranslated = sanitizeConversation(conv.data_translated);
+          const user_id = hashPhoneNumber(conv.phone_number);
+          const location = location_details;
+          const date = getMonday(conv.started_at);
+          const conversation = JSON.stringify(sanitizedData);
+          const original_conversation = JSON.stringify(sanitizedDataTranslated);
 
-        const user_id = hashPhoneNumber(conv.phone_number);
-        const location = location_details;
-        const date = getMonday(conv.started_at);
-        const conversation = JSON.stringify(sanitizedData);
-        const original_conversation = JSON.stringify(sanitizedDataTranslated);
-
-        // Insert into long-term DB
-        await longTermQuery(`
-            INSERT INTO survey_responses
-            (user_id, location, date, conversation, original_conversation, sector, size, investor_origin)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        `, [user_id, location, date, conversation, original_conversation, sector, size, investor_origin]);
+          // Insert into long-term DB
+          await longTermQuery(`
+              INSERT INTO survey_responses
+              (user_id, location, date, conversation, original_conversation, sector, size, investor_origin)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [user_id, location, date, conversation, original_conversation, sector, size, investor_origin]);
+        }
 
         // Delete messages
         await query(`DELETE FROM messages WHERE conversation_id = $1`, [conv.conversation_id]);
 
         // Delete conversation
         await query(`DELETE FROM conversations WHERE conversation_id = $1`, [conv.conversation_id]);
+
+        shouldMigrate ? migrated++ : deleted++;
+      } catch (err) {
+        failed++;
+        console.error(`❌ Cleanup failed for conversation ${conv.conversation_id}:`, err.message || err);
+      }
     }
 
-    console.log(`✅ Cleanup completed at ${new Date().toISOString()}`);
+    console.log(`✅ Cleanup completed at ${new Date().toISOString()} — user_terms removed: ${expiredTerms}, conversations migrated: ${migrated}, deleted without migrating: ${deleted}, failed: ${failed}`);
   } catch (err) {
     console.error('❌ Cleanup error:', err);
   }
