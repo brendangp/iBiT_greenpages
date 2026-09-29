@@ -24,7 +24,10 @@ async function getResponses(messages) {
       max_tokens: prompts.model_params.max_tokens,
       temperature: prompts.model_params.temperature,
       n: prompts.model_params.n,
-      stop: prompts.model_params.stop
+      stop: prompts.model_params.stop,
+      // JSON mode: the history holds earlier replies as plain text, and without this the model
+      // copied that style and dropped the {"text", "type"} contract (and with it location_request)
+      response_format: { type: "json_object" }
     });
 
     // Get the raw content from OpenAI

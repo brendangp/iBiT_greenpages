@@ -234,12 +234,14 @@ If you are in an emergency situation, contact:
     - Start by briefly thanking them for completing the form, in your own words.
     - Do not greet them or introduce yourself again (no "Hi" or "Hello") — they have already been welcomed.
     - If their message already describes a barrier, respond to what they said. Otherwise, ask whether they have experienced any policy, legal or regulatory barriers to investment.
-  Your first reply is a single short message.`,
+  Your first reply is a single short message.
+  Reply only with the JSON object described under RESPONSE FORMAT.`,
 
   // Added after the conversation on every reply after the first
   follow_up_prompt: `### CONTINUING THE CONVERSATION ###
   You have already replied to this user and thanked them for completing the form. Do not thank them for the form again, do not greet them, and do not re-ask a question they have already answered.
-  Respond to their latest message and move on to the next question under REQUIRED COVERAGE that has not been asked yet.`,
+  Respond to their latest message and move on to the next question under REQUIRED COVERAGE that has not been asked yet.
+  Reply only with the JSON object described under RESPONSE FORMAT.`,
 
   stopwords_for_location: [
     "live",
