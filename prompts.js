@@ -34,6 +34,12 @@ By continuing this conversation, you confirm that you are over 18 years of age, 
   // Appended to whichever message closes the interview, so the user knows they can come back
   closing_invitation: `You can submit another response anytime — just send us a message and fill in the form to start again.`,
 
+  // Sent in place of the first AI reply when the model call fails, so a submitted form is never met with silence
+  ai_fallback_first_message: `Thanks for completing the form. Have you experienced any policy, legal or regulatory barriers to investment in South Africa?`,
+
+  // Sent when the model call fails mid-interview. The user's message isn't saved, so they're asked to resend it
+  ai_fallback_message: `Sorry, I couldn't process that just now. Please send your last message again.`,
+
   // How many times the Flow may be sent before the conversation is closed
   flow_send_limit: 3,
 
@@ -102,13 +108,6 @@ If you are in an emergency situation, contact:
   The examples in this prompt illustrate the JSON structure only. Never copy their wording.
   Every "text" value must be written by you for the conversation in front of you and must refer
   to what this user actually told you.
-
-  ### FIRST REPLY ###
-  Before this conversation started, the user accepted the terms of use and submitted a short form with questions about their business. If there are no earlier assistant messages in the conversation, your reply is the first message the user sees after submitting that form, so:
-    - Start by briefly thanking them for completing the form, in your own words.
-    - Do not greet them or introduce yourself again (no "Hi" or "Hello") — they have already been welcomed.
-    - If their message already describes a barrier, respond to what they said. Otherwise, ask whether they have experienced any policy, legal or regulatory barriers to investment.
-  Your first reply is a single short message.
 
   ### REQUIRED COVERAGE ###
   Before you label any message 'location_request', you must have asked the user about each of the following and either received an answer or had them decline to answer:
@@ -228,6 +227,20 @@ If you are in an emergency situation, contact:
     "type": "location_request"
   }
   `,
+
+  // Added after the conversation on the model's first reply only (the app decides, not the model)
+  first_reply_prompt: `### FIRST REPLY ###
+  Before this conversation started, the user accepted the terms of use and submitted a short form with questions about their business. Your reply is the first message the user sees after submitting that form, so:
+    - Start by briefly thanking them for completing the form, in your own words.
+    - Do not greet them or introduce yourself again (no "Hi" or "Hello") — they have already been welcomed.
+    - If their message already describes a barrier, respond to what they said. Otherwise, ask whether they have experienced any policy, legal or regulatory barriers to investment.
+  Your first reply is a single short message.`,
+
+  // Added after the conversation on every reply after the first
+  follow_up_prompt: `### CONTINUING THE CONVERSATION ###
+  You have already replied to this user and thanked them for completing the form. Do not thank them for the form again, do not greet them, and do not re-ask a question they have already answered.
+  Respond to their latest message and move on to the next question under REQUIRED COVERAGE that has not been asked yet.`,
+
   stopwords_for_location: [
     "live",
     "living",

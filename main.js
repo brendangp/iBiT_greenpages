@@ -261,6 +261,27 @@ async function finishWithClosing(conversationId, to, botNumber, language, englis
   console.log(`🏁 Conversation ${conversationId} closed`);
 }
 
+/* ---------------- AI request ---------------- */
+// Builds the model request from the stored English history. The system prompt is never
+// persisted: it goes first, every user turn is wrapped in the ± delimiter the prompt expects,
+// and a closing instruction says whether this is the first reply (thank them for the form) or
+// a later one (don't thank them again). The app decides that from the history — left to the
+// model, it thanked the user for the form on every reply and kept re-asking the first question.
+function buildAiInput(history) {
+  const hasReplied = history.some(msg => msg.role === "assistant");
+
+  return [
+    { role: "system", content: prompts.system_prompt },
+    ...history.map(msg => (msg.role === "user" ? { ...msg, content: `± ${msg.content} ±` } : msg)),
+    { role: "system", content: hasReplied ? prompts.follow_up_prompt : prompts.first_reply_prompt }
+  ];
+}
+
+// True when the model came back with a message we can send
+function hasAiText(aiResponse) {
+  return typeof aiResponse?.text === "string" && aiResponse.text.trim() !== "";
+}
+
 /* ---------------- AI turn ---------------- */
 // Run the model over the stored history, send the reply and persist it.
 // Used for the first AI reply, once the survey Flow has been submitted.
@@ -268,19 +289,17 @@ async function runAiTurn(conversationId, to, botNumber, language, pendingData, p
   const saveData = [...pendingData];
   const saveDataTranslated = [...pendingDataTranslated];
 
-  // The system prompt is never persisted — it is appended only when building the request.
-  // User turns are wrapped in ± markers, the input delimiter the prompt expects.
-  const aiInput = [
-    ...pendingData.map(msg => (msg.role === "user" ? { ...msg, content: `± ${msg.content} ±` } : msg)),
-    { role: "system", content: prompts.system_prompt }
-  ];
+  const aiResponse = await getResponses(buildAiInput(pendingData));
 
-  const aiResponse = await getResponses(aiInput);
-  if (!aiResponse) return;
+  // A failed model call must not leave a submitted form unanswered — send the standard opening
+  // question instead and save it like a normal reply, so the interview carries on from the answer.
+  const aiFailed = !hasAiText(aiResponse);
+  if (aiFailed) {
+    console.error("❌ No AI reply after the form — sending the fallback first question");
+  }
 
-  const responseType = aiResponse.type || "-";
-  // The system prompt's FIRST REPLY section has the model acknowledge the survey Flow itself
-  const englishText = aiResponse.text;
+  const responseType = aiFailed ? "-" : (aiResponse.type || "-");
+  const englishText = aiFailed ? prompts.ai_fallback_first_message : aiResponse.text;
 
   // The model can signal the end of the interview on this very first turn — close the
   // conversation properly instead of dropping the signal.
@@ -603,50 +622,52 @@ app.post("/webhook", async (req, res) => {
         if (incoming.type === "interactive" && incoming.interactive?.type === "nfm_reply") {
           const nfm = incoming.interactive.nfm_reply;
 
+          // Only the JSON parse belongs in this try — anything failing after it is not a parse
+          // error and falls through to the webhook's own error log.
+          let savedData;
           try {
-            const responseData = JSON.parse(nfm.response_json);
-
             // Remove flow_token from response
-            const { flow_token, ...savedData } = responseData;
-
-            // Save the form response and move on to the free-form interview
-            await query(
-              `UPDATE conversations
-              SET first_message = $1, updated_time = NOW(), state = 'unstructured'
-              WHERE conversation_id = $2`,
-              [JSON.stringify(savedData), conversation.conversation_id]
-            );
-
-            // Answer the message the user sent before the terms/Flow with the AI
-            const resPending = await query(
-              `SELECT data, data_translated, language FROM conversations WHERE conversation_id = $1`,
-              [conversation.conversation_id]
-            );
-
-            const pendingData = resPending.rows[0]?.data || [];
-            const pendingDataTranslated = resPending.rows[0]?.data_translated || [];
-            const responseLanguage = resPending.rows[0]?.language || 'en';
-
-            // Nothing buffered (e.g. the Flow was the user's first interaction) — greet instead
-            if (pendingData.length === 0) {
-              pendingData.push({ role: "user", content: "Hello" });
-              pendingDataTranslated.push({ role: "user", content: "Hello" });
-            }
-
-            await runAiTurn(
-              conversation.conversation_id,
-              from,
-              botNumber,
-              responseLanguage,
-              pendingData,
-              pendingDataTranslated
-            );
-
-            // console.log("📋 Form response saved, interview started:", savedData);
-
+            const { flow_token, ...formData } = JSON.parse(nfm.response_json);
+            savedData = formData;
           } catch (err) {
             console.error("❌ Failed to parse form response JSON:", nfm.response_json, err.message);
+            break;
           }
+
+          // Save the form response and move on to the free-form interview
+          await query(
+            `UPDATE conversations
+            SET first_message = $1, updated_time = NOW(), state = 'unstructured'
+            WHERE conversation_id = $2`,
+            [JSON.stringify(savedData), conversation.conversation_id]
+          );
+
+          // Answer the message the user sent before the terms/Flow with the AI
+          const resFlowPending = await query(
+            `SELECT data, data_translated, language FROM conversations WHERE conversation_id = $1`,
+            [conversation.conversation_id]
+          );
+
+          const flowPendingData = resFlowPending.rows[0]?.data || [];
+          const flowPendingDataTranslated = resFlowPending.rows[0]?.data_translated || [];
+          const flowResponseLanguage = resFlowPending.rows[0]?.language || 'en';
+
+          // Nothing buffered (e.g. the Flow was the user's first interaction) — greet instead
+          if (flowPendingData.length === 0) {
+            flowPendingData.push({ role: "user", content: "Hello" });
+            flowPendingDataTranslated.push({ role: "user", content: "Hello" });
+          }
+
+          await runAiTurn(
+            conversation.conversation_id,
+            from,
+            botNumber,
+            flowResponseLanguage,
+            flowPendingData,
+            flowPendingDataTranslated
+          );
+
+          // console.log("📋 Form response saved, interview started:", savedData);
 
         } else {
           // Not a form response — nudge the user, and give up after prompts.flow_send_limit sends
@@ -738,62 +759,74 @@ app.post("/webhook", async (req, res) => {
           break; // ⛔ stop further AI processing
         }
 
-        // Prepare AI input: all history + system prompt
-        const aiInput = [
-          ...pendingData,
-          { role: "user", content: `± ${messageForAI} ±` },  // TDOD: check what text needs to go here, maybe messageForAI?
-          { role: "system", content: prompts.system_prompt }
-        ];
+        // Prepare AI input: system prompt + all history, including this message
+        const aiInput = buildAiInput(saveData);
         console.log("AI Input:", aiInput);
 
         const aiResponse = await getResponses(aiInput);
 
-        if (aiResponse) {
-          const responseType = aiResponse.type || "-";
-          let messageText = aiResponse.text || aiResponse; // fallback
-          console.log("🤖 AI Response before translation:", messageText);
+        // The model call failed — say so rather than going quiet. This message isn't saved,
+        // so asking the user to send it again keeps the history consistent.
+        if (!hasAiText(aiResponse)) {
+          console.error("❌ No AI reply mid-interview — asking the user to resend");
 
-          if (responseType === "-") {
-
-            // Translate if conversation language is not English
-            if (currentMessageLanguage && currentMessageLanguage !== 'en') {
-              const translated = await translateToSelectedLanguage(messageText, currentMessageLanguage);
-              messageText = translated;
-            }
-
-            // 🔹 Standard text response
-            console.log("🤖 AI Response:", messageText);
-            await sendText(conversation.conversation_id, from, messageText, botNumber);
-
-            // Save to history
-            saveData.push({ role: "assistant", content: aiResponse.text });
-            saveDataTranslated.push({ role: "assistant", content: messageText });
-
-            await query(
-              `UPDATE conversations
-              SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), message_limit = $4
-              WHERE conversation_id = $5`,
-              [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), currentMessageLanguage, userMessageCount + 1, conversation.conversation_id]
-            );
-
-          } else if (responseType === "location_request") {
-
-            // 🏁 Interview finished — send the closing message and end the conversation
-            console.log("🏁 AI signalled the end of the interview");
-
-            await finishWithClosing(
-              conversation.conversation_id,
-              from,
-              botNumber,
-              currentMessageLanguage,
-              aiResponse.text,
-              saveData,
-              saveDataTranslated,
-              userMessageCount + 1
-            );
-          } else {
-            console.warn("⚠️ Unknown AI response type:", responseType);
+          let fallbackText = prompts.ai_fallback_message;
+          if (currentMessageLanguage && currentMessageLanguage !== 'en') {
+            fallbackText = await translateToSelectedLanguage(fallbackText, currentMessageLanguage);
           }
+
+          await sendText(conversation.conversation_id, from, fallbackText, botNumber);
+          break;
+        }
+
+        let responseType = aiResponse.type || "-";
+        if (responseType !== "-" && responseType !== "location_request") {
+          // Still send the text rather than dropping the reply
+          console.warn("⚠️ Unknown AI response type, sending as text:", responseType);
+          responseType = "-";
+        }
+
+        let messageText = aiResponse.text;
+        console.log("🤖 AI Response before translation:", messageText);
+
+        if (responseType === "-") {
+
+          // Translate if conversation language is not English
+          if (currentMessageLanguage && currentMessageLanguage !== 'en') {
+            const translated = await translateToSelectedLanguage(messageText, currentMessageLanguage);
+            messageText = translated;
+          }
+
+          // 🔹 Standard text response
+          console.log("🤖 AI Response:", messageText);
+          await sendText(conversation.conversation_id, from, messageText, botNumber);
+
+          // Save to history
+          saveData.push({ role: "assistant", content: aiResponse.text });
+          saveDataTranslated.push({ role: "assistant", content: messageText });
+
+          await query(
+            `UPDATE conversations
+            SET data = $1, data_translated = $2, language = $3, updated_time = NOW(), message_limit = $4
+            WHERE conversation_id = $5`,
+            [JSON.stringify(saveData), JSON.stringify(saveDataTranslated), currentMessageLanguage, userMessageCount + 1, conversation.conversation_id]
+          );
+
+        } else {
+
+          // 🏁 Interview finished — send the closing message and end the conversation
+          console.log("🏁 AI signalled the end of the interview");
+
+          await finishWithClosing(
+            conversation.conversation_id,
+            from,
+            botNumber,
+            currentMessageLanguage,
+            aiResponse.text,
+            saveData,
+            saveDataTranslated,
+            userMessageCount + 1
+          );
         }
 
         break;
